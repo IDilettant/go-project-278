@@ -12,6 +12,6 @@ cover:
 	go tool cover -func=coverage.out
 
 dev:
-	air
+	set -a; . ./.env; set +a; air
 
 .PHONY: test lint build dev
