@@ -40,3 +40,5 @@ coverprofile
 Thumbs.db
 
 *.log
+
+!bin/run.sh
