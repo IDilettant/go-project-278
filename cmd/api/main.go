@@ -2,13 +2,14 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"time"
 
 	"github.com/getsentry/sentry-go"
 
-	"code/internal/web"
+	"code/internal/httpserver"
 )
 
 const (
@@ -17,18 +18,18 @@ const (
 )
 
 func main() {
-	cleanup, err := initSentry()
+	err := initSentry()
 	if err != nil {
-		log.Printf("Sentry disabled: %v", err)
+		log.Fatal(err)
 	}
-	defer cleanup()
+	defer sentry.Flush(sentryTimeout)
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
 	}
 
-	r := web.NewRouter()
+	r := httpserver.NewRouter()
 
 	err = r.Run(port)
 	if err != nil {
@@ -36,15 +37,17 @@ func main() {
 	}
 }
 
-func initSentry() (func(), error) {
+func initSentry() error {
 	dsn := os.Getenv("SENTRY_DSN")
 	if dsn == "" {
-		return func() {}, errors.New("SENTRY_DSN is empty")
+		return errors.New("SENTRY_DSN is empty")
 	}
 
-	if err := sentry.Init(sentry.ClientOptions{Dsn: dsn}); err != nil {
-		return func() {}, err
+	err := sentry.Init(sentry.ClientOptions{Dsn: dsn})
+	if err != nil {
+		return fmt.Errorf("init sentry: %w", err)
 	}
 
-	return func() { sentry.Flush(sentryTimeout) }, nil
+	return nil
 }
+
