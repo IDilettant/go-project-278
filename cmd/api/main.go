@@ -1,53 +1,43 @@
 package main
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"log"
+	"net/http"
 	"os"
-	"time"
+	"os/signal"
+	"syscall"
 
-	"github.com/getsentry/sentry-go"
-
-	"code/internal/httpserver"
-)
-
-const (
-	defaultPort   = "8080"
-	sentryTimeout = 2 * time.Second
+	"code/internal/bootstrap/apiapp"
+	"code/internal/config"
 )
 
 func main() {
-	err := initSentry()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	cfg, err := config.Load()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer sentry.Flush(sentryTimeout)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
-	}
-
-	r := httpserver.NewRouter()
-
-	err = r.Run(port)
+	app, err := apiapp.New(ctx, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-}
+	defer func() {
+		_ = app.Close()
+	}()
 
-func initSentry() error {
-	dsn := os.Getenv("SENTRY_DSN")
-	if dsn == "" {
-		return errors.New("SENTRY_DSN is empty")
-	}
-
-	err := sentry.Init(sentry.ClientOptions{Dsn: dsn})
+	err = app.Run(ctx)
 	if err != nil {
-		return fmt.Errorf("init sentry: %w", err)
+		if errors.Is(err, http.ErrServerClosed) {
+        	log.Print("server stopped")
+
+        	return
+    	}
+
+		log.Fatal(err)
 	}
-
-	return nil
 }
-
