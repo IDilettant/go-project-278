@@ -88,6 +88,17 @@ func (s *Service) Update(ctx context.Context, id int64, originalURL, shortName s
 		return domain.Link{}, err
 	}
 
+	existing, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return domain.Link{}, err
+	}
+
+	if shortName == "" {
+		shortName = existing.ShortName
+	} else if shortName != existing.ShortName {
+		return domain.Link{}, domain.ErrShortNameImmutable
+	}
+
 	if err := domain.ValidateShortName(shortName); err != nil {
 		return domain.Link{}, err
 	}
