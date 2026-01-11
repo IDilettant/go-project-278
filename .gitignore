@@ -41,4 +41,8 @@ Thumbs.db
 
 *.log
 
+*.swp
+*.kate-swp
+*~
+
 !bin/run.sh
