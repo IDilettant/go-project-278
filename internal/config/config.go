@@ -26,6 +26,7 @@ const (
 	defaultHTTPWriteTimeout      = 15 * time.Second
 	defaultHTTPIdleTimeout       = 60 * time.Second
 	defaultHTTPShutdownTimeout   = 5 * time.Second
+	defaultHTTPRequestTimeout    = 5 * time.Second
 )
 
 type Config struct {
@@ -47,6 +48,7 @@ type Config struct {
 	HTTPWriteTimeout      time.Duration
 	HTTPIdleTimeout       time.Duration
 	HTTPShutdownTimeout   time.Duration
+	HTTPRequestTimeout    time.Duration
 }
 
 type durationSpec struct {
@@ -262,6 +264,11 @@ func loadHTTPServer(cfg *Config) error {
 			key: "HTTP_SHUTDOWN_TIMEOUT",
 			def: defaultHTTPShutdownTimeout,
 			dst: &cfg.HTTPShutdownTimeout,
+		},
+		{
+			key: "HTTP_REQUEST_TIMEOUT",
+			def: defaultHTTPRequestTimeout,
+			dst: &cfg.HTTPRequestTimeout,
 		},
 	}
 
