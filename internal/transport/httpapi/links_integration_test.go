@@ -70,12 +70,12 @@ func run(m *testing.M) int {
 	}
 
 	// open via production helper -> covers postgres.Open
-	db, err = pgrepo.Open(tcCtx, pgrepo.OpenConfig{
+	db, err = openDBWithRetry(tcCtx, pgrepo.OpenConfig{
 		DSN:             dsn,
 		MaxOpenConns:    5,
 		MaxIdleConns:    5,
 		ConnMaxLifetime: 5 * time.Minute,
-	})
+	}, 10*time.Second)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "open db:", err)
 
@@ -110,6 +110,7 @@ func run(m *testing.M) int {
 		Links:                   svc,
 		BaseURL:                 cfg.BaseURL,
 		SentryMiddlewareTimeout: cfg.SentryMiddlewareTimeout,
+		RequestTimeout:          cfg.HTTPRequestTimeout,
 	})
 
 	return m.Run()
@@ -134,9 +135,8 @@ func TestAPI_CRUD_HappyPath(t *testing.T) {
 
 	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
 		"original_url": "https://example.com/updated",
-		"short_name":   "exm12",
 	}, http.StatusOK)
-	require.Equal(t, "exm12", asString(t, updated["short_name"]))
+	require.Equal(t, "exmpl", asString(t, updated["short_name"]))
 
 	doNoContent(t, http.MethodDelete, "/api/links/"+itoa(id), http.StatusNoContent)
 	doJSONExpectError(t, http.MethodGet, "/api/links/"+itoa(id), nil, http.StatusNotFound)
@@ -179,7 +179,7 @@ func TestAPI_Conflict_Create(t *testing.T) {
 	}, http.StatusConflict)
 }
 
-func TestAPI_Conflict_Update(t *testing.T) {
+func TestAPI_Update_ImmutableShortName(t *testing.T) {
 	resetLinks(t)
 
 	a := doJSON(t, http.MethodPost, "/api/links", map[string]any{
@@ -198,7 +198,7 @@ func TestAPI_Conflict_Update(t *testing.T) {
 	doJSONExpectError(t, http.MethodPut, "/api/links/"+itoa(bid), map[string]any{
 		"original_url": "https://example.com/b2",
 		"short_name":   target,
-	}, http.StatusConflict)
+	}, http.StatusUnprocessableEntity)
 }
 
 func TestAPI_InvalidID_Returns400(t *testing.T) {
@@ -293,7 +293,7 @@ func TestAPI_Redirect_InvalidShortName_400(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
-	require.Equal(t, "invalid short_name", rec.Body.String())
+	requireProblem(t, rec, http.StatusBadRequest, "validation_error", "Validation error", "invalid short_name")
 }
 
 func TestAPI_Redirect_NotFound_404(t *testing.T) {
@@ -304,7 +304,7 @@ func TestAPI_Redirect_NotFound_404(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusNotFound, rec.Code)
-	require.Equal(t, "not found", rec.Body.String())
+	requireProblem(t, rec, http.StatusNotFound, "about:blank", "Not Found", "")
 }
 
 func resetLinks(t *testing.T) {
@@ -335,88 +335,4 @@ func projectRoot() string {
 
 		dir = parent
 	}
-}
-
-func doRequest(t *testing.T, method, path string, body any) *httptest.ResponseRecorder {
-	t.Helper()
-
-	var buf *bytes.Buffer
-	if body != nil {
-		b, err := json.Marshal(body)
-		require.NoError(t, err)
-		buf = bytes.NewBuffer(b)
-	} else {
-		buf = bytes.NewBuffer(nil)
-	}
-
-	req := httptest.NewRequest(method, path, buf)
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	return rec
-}
-
-func doJSON(t *testing.T, method, path string, body any, want int) map[string]any {
-	t.Helper()
-
-	rec := doRequest(t, method, path, body)
-	require.Equal(t, want, rec.Code, rec.Body.String())
-
-	if want == http.StatusNoContent {
-		return nil
-	}
-
-	var out map[string]any
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
-
-	return out
-}
-
-func doJSONArray(t *testing.T, method, path string, body any, want int) []map[string]any {
-	t.Helper()
-
-	rec := doRequest(t, method, path, body)
-	require.Equal(t, want, rec.Code, rec.Body.String())
-
-	var out []map[string]any
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
-
-	return out
-}
-
-func doNoContent(t *testing.T, method, path string, want int) {
-	t.Helper()
-
-	rec := doRequest(t, method, path, nil)
-	require.Equal(t, want, rec.Code, rec.Body.String())
-}
-
-func doJSONExpectError(t *testing.T, method, path string, body any, want int) {
-	t.Helper()
-
-	_ = doJSON(t, method, path, body, want)
-}
-
-func itoa(v int64) string { return fmt.Sprintf("%d", v) }
-
-func asString(t *testing.T, v any) string {
-	t.Helper()
-
-	s, ok := v.(string)
-	require.True(t, ok, "expected string, got %T (%v)", v, v)
-
-	return s
-}
-
-func asInt64(t *testing.T, v any) int64 {
-	t.Helper()
-
-	f, ok := v.(float64)
-	require.True(t, ok, "expected number(float64), got %T (%v)", v, v)
-
-	return int64(f)
 }
