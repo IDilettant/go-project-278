@@ -1,5 +1,15 @@
+ENV_FILE := $(CURDIR)/.env
+
+define load_env
+	set -a; [ -f $(ENV_FILE) ] && . $(ENV_FILE); set +a;
+endef
+
 test:
 	go test -v ./... -race
+
+test-integration:
+	$(load_env) \
+	go test -v ./... -race -tags=integration
 
 lint:
 	golangci-lint run ./...
@@ -8,10 +18,28 @@ build:
 	go build -o bin/shortener ./cmd/api
 
 cover:
-	go test -v ./... -race -count=1 -covermode=atomic -coverprofile=coverage.out
+	go test -v ./... -race -count=1 -tags=integration \
+		-covermode=atomic -coverpkg=./... -coverprofile=coverage.out
 	go tool cover -func=coverage.out
 
 dev:
-	set -a; . ./.env; set +a; air
+	$(load_env) air
 
-.PHONY: test lint build dev
+db-up:
+	docker compose up -d
+
+db-down:
+	docker compose down
+
+migrate-up:
+	$(load_env) \
+	goose -dir ./db/migrations postgres "$$DATABASE_URL" up
+
+migrate-down:
+	$(load_env) \
+	goose -dir ./db/migrations postgres "$$DATABASE_URL" down
+
+sqlc:
+	sqlc generate
+
+.PHONY: test lint build dev sqlc migrate-up migrate-down db-up db-down
