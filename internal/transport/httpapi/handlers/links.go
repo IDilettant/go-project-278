@@ -44,7 +44,7 @@ func (h *Handler) ListLinks(c *gin.Context) {
 func (h *Handler) CreateLink(c *gin.Context) {
 	var req createLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json"})
+		badJSON(c)
 
 		return
 	}
@@ -83,7 +83,7 @@ func (h *Handler) UpdateLink(c *gin.Context) {
 
 	var req updateLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json"})
+		badJSON(c)
 
 		return
 	}
@@ -119,7 +119,12 @@ func parseID(c *gin.Context) (int64, bool) {
 
 	id, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		writeProblem(c, Problem{
+			Type:   "validation_error",
+			Title:  "Validation error",
+			Status: http.StatusBadRequest,
+			Detail: "invalid id",
+		})
 
 		return 0, false
 	}
