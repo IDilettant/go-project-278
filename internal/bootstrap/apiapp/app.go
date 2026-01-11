@@ -44,6 +44,7 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 		Links:                   svc,
 		BaseURL:                 cfg.BaseURL,
 		SentryMiddlewareTimeout: cfg.SentryMiddlewareTimeout,
+		RequestTimeout:          cfg.HTTPRequestTimeout,
 	})
 
 	return &App{cfg: cfg, db: db, router: router}, nil
@@ -55,7 +56,7 @@ func (a *App) Close() error {
 	if a.db == nil {
 		return nil
 	}
-	
+
 	return a.db.Close()
 }
 
@@ -79,21 +80,23 @@ func (a *App) Run(ctx context.Context) error {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), a.cfg.HTTPShutdownTimeout)
 		defer cancel()
 
-		_ = srv.Shutdown(shutdownCtx)
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			return fmt.Errorf("shutdown http server: %w", err)
+		}
 
 		// Wait for ListenAndServe to return.
 		err := <-errCh
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
-		
+
 		return err
 
 	case err := <-errCh:
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
-		
+
 		return err
 	}
 }
