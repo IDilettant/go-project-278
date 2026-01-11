@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"net/http"
 	"time"
 
 	sentrygin "github.com/getsentry/sentry-go/gin"
@@ -9,6 +8,7 @@ import (
 
 	"code/internal/app/links"
 	"code/internal/transport/httpapi/handlers"
+	"code/internal/transport/httpapi/middleware"
 )
 
 type RouterDeps struct {
@@ -16,6 +16,7 @@ type RouterDeps struct {
 	BaseURL string
 
 	SentryMiddlewareTimeout time.Duration
+	RequestTimeout          time.Duration
 }
 
 func NewRouter(deps RouterDeps) *gin.Engine {
@@ -27,11 +28,13 @@ func NewRouter(deps RouterDeps) *gin.Engine {
 		Timeout: deps.SentryMiddlewareTimeout,
 	}))
 
-	r.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-	})
+	if deps.RequestTimeout > 0 {
+		r.Use(middleware.RequestTimeout(deps.RequestTimeout))
+	}
 
 	h := handlers.New(deps.Links, deps.BaseURL)
+
+	r.NoRoute(h.NotFound)
 
 	api := r.Group("/api")
 	{
