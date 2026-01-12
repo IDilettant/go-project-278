@@ -87,6 +87,7 @@ func (h *Handler) ListLinks(c *gin.Context) {
 // @Router /api/links [post]
 func (h *Handler) CreateLink(c *gin.Context) {
 	var req CreateLinkRequest
+	
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		badJSON(c)
