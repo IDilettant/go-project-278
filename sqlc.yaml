@@ -1,9 +1,9 @@
 ---
-version: '2'
+version: "2"
 sql:
   - engine: postgresql
     schema: db/migrations
-    queries: sql/queries
+    queries: internal/repository/postgres/sql/queries
     gen:
       go:
         package: sqlcgen
