@@ -12,7 +12,9 @@ import (
 type stubRepo struct {
 	t testing.TB
 
-	listFunc           func(context.Context) ([]domain.Link, error)
+	listAllFunc        func(context.Context) ([]domain.Link, error)
+	listPageFunc       func(context.Context, int32, int32) ([]domain.Link, error)
+	countFunc          func(context.Context) (int64, error)
 	getByIDFunc        func(context.Context, int64) (domain.Link, error)
 	getByShortNameFunc func(context.Context, string) (domain.Link, error)
 	createFunc         func(context.Context, string, string) (domain.Link, error)
@@ -20,51 +22,83 @@ type stubRepo struct {
 	deleteFunc         func(context.Context, int64) error
 }
 
-func (s *stubRepo) List(ctx context.Context) ([]domain.Link, error) {
+func (s *stubRepo) ListAll(ctx context.Context) ([]domain.Link, error) {
 	s.t.Helper()
-	if s.listFunc == nil {
-		s.t.Fatalf("unexpected List call")
+
+	if s.listAllFunc == nil {
+		s.t.Fatalf("unexpected ListAll call")
 	}
-	return s.listFunc(ctx)
+
+	return s.listAllFunc(ctx)
+}
+
+func (s *stubRepo) ListPage(ctx context.Context, offset, limit int32) ([]domain.Link, error) {
+	s.t.Helper()
+
+	if s.listPageFunc == nil {
+		s.t.Fatalf("unexpected ListPage call")
+	}
+
+	return s.listPageFunc(ctx, offset, limit)
+}
+
+func (s *stubRepo) Count(ctx context.Context) (int64, error) {
+	s.t.Helper()
+
+	if s.countFunc == nil {
+		s.t.Fatalf("unexpected Count call")
+	}
+
+	return s.countFunc(ctx)
 }
 
 func (s *stubRepo) GetByID(ctx context.Context, id int64) (domain.Link, error) {
 	s.t.Helper()
+
 	if s.getByIDFunc == nil {
 		s.t.Fatalf("unexpected GetByID call")
 	}
+
 	return s.getByIDFunc(ctx, id)
 }
 
 func (s *stubRepo) GetByShortName(ctx context.Context, shortName string) (domain.Link, error) {
 	s.t.Helper()
+
 	if s.getByShortNameFunc == nil {
 		s.t.Fatalf("unexpected GetByShortName call")
 	}
+
 	return s.getByShortNameFunc(ctx, shortName)
 }
 
 func (s *stubRepo) Create(ctx context.Context, originalURL, shortName string) (domain.Link, error) {
 	s.t.Helper()
+
 	if s.createFunc == nil {
 		s.t.Fatalf("unexpected Create call")
 	}
+
 	return s.createFunc(ctx, originalURL, shortName)
 }
 
 func (s *stubRepo) Update(ctx context.Context, id int64, originalURL, shortName string) (domain.Link, error) {
 	s.t.Helper()
+
 	if s.updateFunc == nil {
 		s.t.Fatalf("unexpected Update call")
 	}
+
 	return s.updateFunc(ctx, id, originalURL, shortName)
 }
 
 func (s *stubRepo) Delete(ctx context.Context, id int64) error {
 	s.t.Helper()
+
 	if s.deleteFunc == nil {
 		s.t.Fatalf("unexpected Delete call")
 	}
+
 	return s.deleteFunc(ctx, id)
 }
 
@@ -81,6 +115,7 @@ func TestServiceCreate_AutoShortNameRetries(t *testing.T) {
 			if calls < 3 {
 				return domain.Link{}, domain.ErrShortNameConflict
 			}
+
 			return domain.Link{
 				ID:          1,
 				OriginalURL: originalURL,
