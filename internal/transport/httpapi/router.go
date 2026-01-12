@@ -12,7 +12,7 @@ import (
 )
 
 type RouterDeps struct {
-	Links   *links.Service
+	Links   links.UseCase
 	BaseURL string
 
 	SentryMiddlewareTimeout time.Duration
