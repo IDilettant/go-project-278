@@ -11,54 +11,52 @@ import (
 )
 
 type Problem struct {
-	Type   string `json:"type,omitempty"`
-	Title  string `json:"title"`
-	Status int    `json:"status"`
-	Detail string `json:"detail,omitempty"`
+	Type   string `json:"type,omitempty" example:"validation_error"`
+	Title  string `json:"title" example:"Validation error"`
+	Status int    `json:"status" example:"400"`
+	Detail string `json:"detail,omitempty" example:"invalid short_name"`
 }
 
-const validationTitle = "Validation error"
-
 func writeProblem(c *gin.Context, p Problem) {
-	c.Header("Content-Type", "application/problem+json")
+	c.Header("Content-Type", contentTypeProblemJSON)
 	c.JSON(p.Status, p)
 }
 
 func problemFromError(err error) Problem {
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
-		return Problem{Type: "about:blank", Title: "Not Found", Status: http.StatusNotFound}
+		return Problem{Type: problemTypeNotFound, Title: "Not Found", Status: http.StatusNotFound}
 	case errors.Is(err, domain.ErrInvalidURL):
 		return Problem{
-			Type:   "validation_error",
+			Type:   problemTypeValidation,
 			Title:  validationTitle,
 			Status: http.StatusBadRequest,
 			Detail: "invalid url",
 		}
 	case errors.Is(err, domain.ErrInvalidShortName):
 		return Problem{
-			Type:   "validation_error",
+			Type:   problemTypeValidation,
 			Title:  validationTitle,
 			Status: http.StatusBadRequest,
 			Detail: "invalid short_name",
 		}
 	case errors.Is(err, domain.ErrShortNameConflict):
 		return Problem{
-			Type:   "conflict",
+			Type:   problemTypeConflict,
 			Title:  "Conflict",
 			Status: http.StatusConflict,
 			Detail: "short_name already exists",
 		}
 	case errors.Is(err, domain.ErrShortNameImmutable):
 		return Problem{
-			Type:   "validation_error",
+			Type:   problemTypeValidation,
 			Title:  validationTitle,
 			Status: http.StatusUnprocessableEntity,
 			Detail: "short_name is immutable",
 		}
 	case errors.Is(err, context.DeadlineExceeded):
 		return Problem{
-			Type:   "timeout",
+			Type:   problemTypeTimeout,
 			Title:  "Gateway Timeout",
 			Status: http.StatusGatewayTimeout,
 		}
@@ -70,13 +68,13 @@ func problemFromError(err error) Problem {
 			Detail: "request canceled",
 		}
 	default:
-		return Problem{Type: "internal_error", Title: "Internal Server Error", Status: http.StatusInternalServerError}
+		return Problem{Type: problemTypeInternal, Title: "Internal Server Error", Status: http.StatusInternalServerError}
 	}
 }
 
 func badJSON(c *gin.Context) {
 	writeProblem(c, Problem{
-		Type:   "invalid_json",
+		Type:   problemTypeInvalidJSON,
 		Title:  "Bad Request",
 		Status: http.StatusBadRequest,
 		Detail: "invalid json",
