@@ -115,9 +115,7 @@ func (h *Handler) DeleteLink(c *gin.Context) {
 }
 
 func parseID(c *gin.Context) (int64, bool) {
-	raw := c.Param("id")
-
-	id, err := strconv.ParseInt(raw, 10, 64)
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || id <= 0 {
 		writeProblem(c, Problem{
 			Type:   "validation_error",
