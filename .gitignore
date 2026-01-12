@@ -1,7 +1,11 @@
 /bin/
+!bin/run.sh
 /dist/
 /build/
 /tmp/
+/docs/
+!/docs/openapi/
+!/docs/openapi/openapi.json
 
 *.exe
 *.dll
@@ -44,5 +48,3 @@ Thumbs.db
 *.swp
 *.kate-swp
 *~
-
-!bin/run.sh
