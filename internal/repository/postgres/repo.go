@@ -29,10 +29,10 @@ func NewRepo(db *sql.DB) *Repo {
 
 var _ links.Repo = (*Repo)(nil)
 
-func (r *Repo) List(ctx context.Context) ([]domain.Link, error) {
+func (r *Repo) ListAll(ctx context.Context) ([]domain.Link, error) {
 	rows, err := r.q.ListLinks(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("postgres: list links: %w", err)
+		return nil, fmt.Errorf("postgres: list all links: %w", err)
 	}
 
 	out := make([]domain.Link, 0, len(rows))
@@ -41,6 +41,32 @@ func (r *Repo) List(ctx context.Context) ([]domain.Link, error) {
 	}
 
 	return out, nil
+}
+
+func (r *Repo) ListPage(ctx context.Context, offset, limit int32) ([]domain.Link, error) {
+	rows, err := r.q.ListLinksPage(ctx, sqlcgen.ListLinksPageParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("postgres: list links page: %w", err)
+	}
+
+	out := make([]domain.Link, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, mapRow(row))
+	}
+
+	return out, nil
+}
+
+func (r *Repo) Count(ctx context.Context) (int64, error) {
+	total, err := r.q.CountLinks(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("postgres: count links: %w", err)
+	}
+
+	return total, nil
 }
 
 func (r *Repo) GetByID(ctx context.Context, id int64) (domain.Link, error) {

@@ -1,3 +1,13 @@
+-- name: CountLinks :one
+SELECT COUNT(*)
+FROM links;
+
+-- name: ListLinksPage :many
+SELECT id, original_url, short_name, created_at
+FROM links
+ORDER BY id ASC
+LIMIT $1 OFFSET $2;
+
 -- name: ListLinks :many
 SELECT id, original_url, short_name, created_at
 FROM links
