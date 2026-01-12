@@ -42,4 +42,7 @@ migrate-down:
 sqlc:
 	sqlc generate
 
-.PHONY: test lint build dev sqlc migrate-up migrate-down db-up db-down
+swagger:
+	go generate ./...
+
+.PHONY: test lint build dev sqlc swagger migrate-up migrate-down db-up db-down
