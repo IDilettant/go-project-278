@@ -19,6 +19,11 @@ type RouterDeps struct {
 	RequestTimeout          time.Duration
 }
 
+const (
+	linkByIDPath = "/links/:id"
+	linksPath    = "/links"
+)
+
 func NewRouter(deps RouterDeps) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
@@ -38,11 +43,11 @@ func NewRouter(deps RouterDeps) *gin.Engine {
 
 	api := r.Group("/api")
 	{
-		api.GET("/links", h.ListLinks)
-		api.POST("/links", h.CreateLink)
-		api.GET("/links/:id", h.GetLink)
-		api.PUT("/links/:id", h.UpdateLink)
-		api.DELETE("/links/:id", h.DeleteLink)
+		api.GET(linksPath, h.ListLinks)
+		api.POST(linksPath, h.CreateLink)
+		api.GET(linkByIDPath, h.GetLink)
+		api.PUT(linkByIDPath, h.UpdateLink)
+		api.DELETE(linkByIDPath, h.DeleteLink)
 	}
 
 	r.GET("/r/:short_name", h.Redirect)
