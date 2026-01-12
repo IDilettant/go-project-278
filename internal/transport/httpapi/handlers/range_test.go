@@ -1,0 +1,55 @@
+package handlers_test
+
+import (
+	"testing"
+
+	"code/internal/transport/httpapi/handlers"
+)
+
+func TestParseRangeParam(t *testing.T) {
+	tests := []struct {
+		name    string
+		raw     string
+		want    handlers.Range
+		wantErr bool
+	}{
+		{name: "empty", raw: "", wantErr: true},
+		{name: "spaces", raw: "   ", wantErr: true},
+		{name: "valid", raw: "[0,10]", want: handlers.Range{Start: 0, Count: 10}},
+		{name: "valid_with_spaces", raw: "[ 5 , 10 ]", want: handlers.Range{Start: 5, Count: 10}},
+		{name: "invalid_text", raw: "bad", wantErr: true},
+		{name: "invalid_empty_brackets", raw: "[]", wantErr: true},
+		{name: "invalid_single_value", raw: "[0]", wantErr: true},
+		{name: "invalid_extra_values", raw: "[0,10,20]", wantErr: true},
+		{name: "non_numeric_start", raw: "[a,10]", wantErr: true},
+		{name: "non_numeric_end", raw: "[0,b]", wantErr: true},
+		{name: "negative_start", raw: "[-1,5]", wantErr: true},
+		{name: "zero_count", raw: "[0,0]", wantErr: true},
+		{name: "negative_count", raw: "[5,-1]", wantErr: true},
+		{name: "limit_max_ok", raw: "[0,1000]", want: handlers.Range{Start: 0, Count: 1000}},
+		{name: "limit_too_large", raw: "[0,1001]", wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := handlers.ParseRangeParam(tc.raw)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if got != tc.want {
+				t.Fatalf("unexpected range: got=%+v want=%+v", got, tc.want)
+			}
+		})
+	}
+}
