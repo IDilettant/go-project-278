@@ -5,6 +5,7 @@ package apiapp_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,6 +20,7 @@ import (
 
 	"code/internal/bootstrap/apiapp"
 	"code/internal/config"
+	"code/internal/testutils"
 )
 
 func TestApp_New_Run_Close(t *testing.T) {
@@ -40,12 +42,9 @@ func TestApp_New_Run_Close(t *testing.T) {
 	dsn, err := pgC.ConnectionString(ctx, "sslmode=disable")
 	require.NoError(t, err)
 
-	// migrations (через обычный sql.DB — так проще, а app потом сам откроет DB через postgres.Open)
-	db, err := sql.Open("pgx", dsn)
+	db, err := openDBWithRetry(ctx, dsn, 10*time.Second)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
-
-	require.NoError(t, pingWithTimeout(ctx, db, 10*time.Second))
 
 	goose.SetDialect("postgres")
 	migrationsDir := filepath.Join(projectRoot(t), "db", "migrations")
@@ -79,6 +78,44 @@ func pingWithTimeout(ctx context.Context, db *sql.DB, timeout time.Duration) err
 	pctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	return db.PingContext(pctx)
+}
+
+func openDBWithRetry(ctx context.Context, dsn string, timeout time.Duration) (*sql.DB, error) {
+	deadline := time.Now().Add(timeout)
+	var lastErr error
+
+	for time.Now().Before(deadline) {
+		if err := ctx.Err(); err != nil {
+			return nil, fmt.Errorf("open db with retry (timeout=%s): %w", timeout, err)
+		}
+
+		db, err := sql.Open("pgx", dsn)
+		if err != nil {
+			lastErr = err
+			if err := testutils.Sleep(ctx, 200*time.Millisecond); err != nil {
+				return nil, fmt.Errorf("open db with retry (timeout=%s): %w", timeout, err)
+			}
+
+			continue
+		}
+
+		if err := pingWithTimeout(ctx, db, 2*time.Second); err == nil {
+			return db, nil
+		} else {
+			lastErr = err
+		}
+
+		_ = db.Close()
+		if err := testutils.Sleep(ctx, 200*time.Millisecond); err != nil {
+			return nil, fmt.Errorf("open db with retry (timeout=%s): %w", timeout, err)
+		}
+	}
+
+	if lastErr == nil {
+		lastErr = context.DeadlineExceeded
+	}
+
+	return nil, fmt.Errorf("open db with retry (timeout=%s): %w", timeout, lastErr)
 }
 
 func projectRoot(t *testing.T) string {
