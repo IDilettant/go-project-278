@@ -17,6 +17,8 @@ type Problem struct {
 	Detail string `json:"detail,omitempty"`
 }
 
+const validationTitle = "Validation error"
+
 func writeProblem(c *gin.Context, p Problem) {
 	c.Header("Content-Type", "application/problem+json")
 	c.JSON(p.Status, p)
@@ -29,14 +31,14 @@ func problemFromError(err error) Problem {
 	case errors.Is(err, domain.ErrInvalidURL):
 		return Problem{
 			Type:   "validation_error",
-			Title:  "Validation error",
+			Title:  validationTitle,
 			Status: http.StatusBadRequest,
 			Detail: "invalid url",
 		}
 	case errors.Is(err, domain.ErrInvalidShortName):
 		return Problem{
 			Type:   "validation_error",
-			Title:  "Validation error",
+			Title:  validationTitle,
 			Status: http.StatusBadRequest,
 			Detail: "invalid short_name",
 		}
@@ -50,7 +52,7 @@ func problemFromError(err error) Problem {
 	case errors.Is(err, domain.ErrShortNameImmutable):
 		return Problem{
 			Type:   "validation_error",
-			Title:  "Validation error",
+			Title:  validationTitle,
 			Status: http.StatusUnprocessableEntity,
 			Detail: "short_name is immutable",
 		}
