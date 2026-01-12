@@ -22,5 +22,5 @@ func (h *Handler) fail(c *gin.Context, err error) {
 }
 
 func (h *Handler) NotFound(c *gin.Context) {
-	writeProblem(c, Problem{Type: problemTypeNotFound, Title: "Not Found", Status: http.StatusNotFound})
+	writeProblem(c, Problem{Type: ProblemTypeNotFound, Title: "Not Found", Status: http.StatusNotFound})
 }

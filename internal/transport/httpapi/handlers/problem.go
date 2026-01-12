@@ -25,38 +25,38 @@ func writeProblem(c *gin.Context, p Problem) {
 func problemFromError(err error) Problem {
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
-		return Problem{Type: problemTypeNotFound, Title: "Not Found", Status: http.StatusNotFound}
+		return Problem{Type: ProblemTypeNotFound, Title: "Not Found", Status: http.StatusNotFound}
 	case errors.Is(err, domain.ErrInvalidURL):
 		return Problem{
-			Type:   problemTypeValidation,
+			Type:   ProblemTypeValidation,
 			Title:  validationTitle,
 			Status: http.StatusBadRequest,
 			Detail: "invalid url",
 		}
 	case errors.Is(err, domain.ErrInvalidShortName):
 		return Problem{
-			Type:   problemTypeValidation,
+			Type:   ProblemTypeValidation,
 			Title:  validationTitle,
 			Status: http.StatusBadRequest,
 			Detail: "invalid short_name",
 		}
 	case errors.Is(err, domain.ErrShortNameConflict):
 		return Problem{
-			Type:   problemTypeConflict,
+			Type:   ProblemTypeConflict,
 			Title:  "Conflict",
 			Status: http.StatusConflict,
 			Detail: "short_name already exists",
 		}
 	case errors.Is(err, domain.ErrShortNameImmutable):
 		return Problem{
-			Type:   problemTypeValidation,
+			Type:   ProblemTypeValidation,
 			Title:  validationTitle,
 			Status: http.StatusUnprocessableEntity,
 			Detail: "short_name is immutable",
 		}
 	case errors.Is(err, context.DeadlineExceeded):
 		return Problem{
-			Type:   problemTypeTimeout,
+			Type:   ProblemTypeTimeout,
 			Title:  "Gateway Timeout",
 			Status: http.StatusGatewayTimeout,
 		}
@@ -68,6 +68,6 @@ func problemFromError(err error) Problem {
 			Detail: "request canceled",
 		}
 	default:
-		return Problem{Type: problemTypeInternal, Title: "Internal Server Error", Status: http.StatusInternalServerError}
+		return Problem{Type: ProblemTypeInternal, Title: "Internal Server Error", Status: http.StatusInternalServerError}
 	}
 }

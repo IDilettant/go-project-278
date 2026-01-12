@@ -87,7 +87,8 @@ func (h *Handler) ListLinks(c *gin.Context) {
 // @Router /api/links [post]
 func (h *Handler) CreateLink(c *gin.Context) {
 	var req CreateLinkRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
 		badJSON(c)
 
 		return
@@ -153,7 +154,9 @@ func (h *Handler) UpdateLink(c *gin.Context) {
 	}
 
 	var req UpdateLinkRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	
+	err := bindJSONStrict(c, &req)
+	if err != nil {
 		badJSON(c)
 
 		return
@@ -199,7 +202,7 @@ func parseID(c *gin.Context) (int64, bool) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || id <= 0 {
 		writeProblem(c, Problem{
-			Type:   problemTypeValidation,
+			Type:   ProblemTypeValidation,
 			Title:  validationTitle,
 			Status: http.StatusBadRequest,
 			Detail: "invalid id",

@@ -35,7 +35,7 @@ func parseListRange(raw string) (Range, PageQuery, bool, error) {
 
 func writeInvalidRange(c *gin.Context) {
 	writeProblem(c, Problem{
-		Type:   problemTypeValidation,
+		Type:   ProblemTypeValidation,
 		Title:  validationTitle,
 		Status: http.StatusBadRequest,
 		Detail: "invalid range", // expected [start,count]
