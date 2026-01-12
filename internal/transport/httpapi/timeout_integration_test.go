@@ -23,23 +23,23 @@ func (timeoutRepo) List(ctx context.Context) ([]domain.Link, error) {
 	return nil, ctx.Err()
 }
 
-func (timeoutRepo) GetByID(ctx context.Context, id int64) (domain.Link, error) {
+func (timeoutRepo) GetByID(_ context.Context, _ int64) (domain.Link, error) {
 	return domain.Link{}, domain.ErrNotFound
 }
 
-func (timeoutRepo) GetByShortName(ctx context.Context, shortName string) (domain.Link, error) {
+func (timeoutRepo) GetByShortName(_ context.Context, _ string) (domain.Link, error) {
 	return domain.Link{}, domain.ErrNotFound
 }
 
-func (timeoutRepo) Create(ctx context.Context, originalURL, shortName string) (domain.Link, error) {
+func (timeoutRepo) Create(_ context.Context, _, _ string) (domain.Link, error) {
 	return domain.Link{}, domain.ErrShortNameConflict
 }
 
-func (timeoutRepo) Update(ctx context.Context, id int64, originalURL, shortName string) (domain.Link, error) {
+func (timeoutRepo) Update(_ context.Context, _ int64, _, _ string) (domain.Link, error) {
 	return domain.Link{}, domain.ErrNotFound
 }
 
-func (timeoutRepo) Delete(ctx context.Context, id int64) error {
+func (timeoutRepo) Delete(_ context.Context, _ int64) error {
 	return domain.ErrNotFound
 }
 
