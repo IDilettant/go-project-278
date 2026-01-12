@@ -71,12 +71,3 @@ func problemFromError(err error) Problem {
 		return Problem{Type: problemTypeInternal, Title: "Internal Server Error", Status: http.StatusInternalServerError}
 	}
 }
-
-func badJSON(c *gin.Context) {
-	writeProblem(c, Problem{
-		Type:   problemTypeInvalidJSON,
-		Title:  "Bad Request",
-		Status: http.StatusBadRequest,
-		Detail: "invalid json",
-	})
-}
