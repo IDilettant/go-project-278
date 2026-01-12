@@ -13,6 +13,12 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Install swag
+        run: go install github.com/swaggo/swag/cmd/swag@v1.16.4
+      - name: Verify OpenAPI spec is up to date
+        run: |
+          make swagger
+          git diff --exit-code -- docs/openapi/openapi.json
       - run: make build
       - name: Run tests with race & coverage
         run: make cover
