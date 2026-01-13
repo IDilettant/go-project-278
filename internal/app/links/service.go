@@ -15,6 +15,8 @@ const (
 
 	shortNameRandBytes = 6
 	shortNameLen       = 8
+
+	createErrWrapFmt = "links create: %w"
 )
 
 var shortNameAlphabet = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
@@ -98,7 +100,7 @@ func (s *Service) Create(ctx context.Context, originalURL, shortName string) (do
 
 	link, err := s.repo.Create(ctx, originalURL, shortName)
 	if err != nil {
-		return domain.Link{}, fmt.Errorf("links create: %w", err)
+		return domain.Link{}, fmt.Errorf(createErrWrapFmt, err)
 	}
 
 	return link, nil
@@ -159,13 +161,13 @@ func (s *Service) createWithGeneratedShortName(
 		}
 
 		if err != nil {
-			return domain.Link{}, fmt.Errorf("links create: %w", err)
+			return domain.Link{}, fmt.Errorf(createErrWrapFmt, err)
 		}
 
 		return link, nil
 	}
 
-	return domain.Link{}, fmt.Errorf("links create: %w", domain.ErrShortNameConflict)
+	return domain.Link{}, fmt.Errorf(createErrWrapFmt, domain.ErrShortNameConflict)
 }
 
 func generateShortName() (string, error) {
