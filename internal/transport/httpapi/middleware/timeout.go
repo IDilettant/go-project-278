@@ -11,6 +11,7 @@ func RequestTimeout(d time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if _, ok := c.Request.Context().Deadline(); ok {
 			c.Next()
+			
 			return
 		}
 
