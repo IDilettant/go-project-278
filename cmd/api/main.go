@@ -1,11 +1,3 @@
-// @title URL Shortener API
-// @version 1.0
-// @description URL shortener service API.
-// @description
-// @BasePath /
-// @schemes http https
-//
-//go:generate sh -c "swag init -g ./main.go -o ../../docs/openapi --outputTypes json && mv ../../docs/openapi/swagger.json ../../docs/openapi/openapi.json"
 package main
 
 import (
