@@ -129,15 +129,15 @@ func validateBaseURL(v string) error {
 		return ErrInvalidBaseURL
 	}
 
-	if u.Scheme != "http" && u.Scheme != "https" {
+	return validateBaseURLParts(u)
+}
+
+func validateBaseURLParts(u *url.URL) error {
+	if !isAllowedScheme(u.Scheme) {
 		return ErrInvalidBaseURL
 	}
 
 	if u.Hostname() == "" {
-		return ErrInvalidBaseURL
-	}
-
-	if u.Port() != "" {
 		return ErrInvalidBaseURL
 	}
 
@@ -150,6 +150,10 @@ func validateBaseURL(v string) error {
 	}
 
 	return nil
+}
+
+func isAllowedScheme(scheme string) bool {
+	return scheme == "http" || scheme == "https"
 }
 
 // env helpers
