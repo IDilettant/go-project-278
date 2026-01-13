@@ -22,6 +22,9 @@ coverprofile
 .env.*
 !.env.example
 
+.cache/
+.cache/*
+
 .lsp/
 .lsp-cache/
 .gopls/
