@@ -42,7 +42,17 @@ migrate-down:
 sqlc:
 	sqlc generate
 
-swagger:
-	go generate ./...
+docs-open-up:
+	$(load_env) \
+	docker compose -f docker-compose.docs.yml up -d --remove-orphans
+	$(load_env) \
+	sh -c 'URL="$${DOCS_URL}:$${DOCS_PORT}"; \
+	echo "API docs: $${URL}"; \
+	(command -v xdg-open >/dev/null && xdg-open "$${URL}" >/dev/null 2>&1 || true); \
+	(command -v open >/dev/null && open "$${URL}" >/dev/null 2>&1 || true)'
 
-.PHONY: test lint build dev sqlc swagger migrate-up migrate-down db-up db-down
+docs-down:
+	docker compose -f docker-compose.docs.yml down
+
+
+.PHONY: test lint build dev sqlc docs migrate-up migrate-down db-up db-down
