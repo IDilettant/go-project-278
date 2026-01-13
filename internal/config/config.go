@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -123,7 +124,28 @@ func validateBaseURL(v string) error {
 		return ErrBaseURLEmpty
 	}
 
-	if !strings.HasPrefix(v, "http://") && !strings.HasPrefix(v, "https://") {
+	u, err := url.Parse(v)
+	if err != nil {
+		return ErrInvalidBaseURL
+	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return ErrInvalidBaseURL
+	}
+
+	if u.Hostname() == "" {
+		return ErrInvalidBaseURL
+	}
+
+	if u.Port() != "" {
+		return ErrInvalidBaseURL
+	}
+
+	if u.RawQuery != "" || u.Fragment != "" {
+		return ErrInvalidBaseURL
+	}
+
+	if u.Path != "" && u.Path != "/" {
 		return ErrInvalidBaseURL
 	}
 
