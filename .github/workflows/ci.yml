@@ -13,10 +13,11 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Validate OpenAPI spec (Swagger Editor)
-        uses: swaggerexpert/swagger-editor-validate@v1
+      - name: Validate OpenAPI spec (ApiDOM)
+        uses: swaggerexpert/apidom-validate@v1
         with:
           definition-file: openapi/openapi.yaml
+          fails-on: 1
       - run: make build
       - name: Run tests with race & coverage
         run: make cover
