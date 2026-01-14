@@ -126,8 +126,9 @@ func TestAPI_CRUD_HappyPath(t *testing.T) {
 	}, http.StatusCreated)
 
 	id := asInt64(t, created["id"])
-	require.Equal(t, "exmpl", asString(t, created["short_name"]))
-	require.NotEmpty(t, asString(t, created["short_url"]))
+	originalShort := asString(t, created["short_name"])
+	require.Equal(t, "exmpl", originalShort)
+	require.Equal(t, "http://localhost:8080/r/"+originalShort, asString(t, created["short_url"]))
 
 	_ = doJSON(t, http.MethodGet, "/api/links/"+itoa(id), nil, http.StatusOK)
 
@@ -137,7 +138,9 @@ func TestAPI_CRUD_HappyPath(t *testing.T) {
 	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
 		"original_url": "https://example.com/updated",
 	}, http.StatusOK)
-	require.Equal(t, "exmpl", asString(t, updated["short_name"]))
+	updatedShort := asString(t, updated["short_name"])
+	require.NotEqual(t, originalShort, updatedShort)
+	require.Equal(t, "http://localhost:8080/r/"+updatedShort, asString(t, updated["short_url"]))
 
 	doNoContent(t, http.MethodDelete, "/api/links/"+itoa(id), http.StatusNoContent)
 	doJSONExpectError(t, http.MethodGet, "/api/links/"+itoa(id), nil, http.StatusNotFound)
@@ -291,26 +294,86 @@ func TestAPI_Conflict_Create(t *testing.T) {
 	}, http.StatusConflict)
 }
 
-func TestAPI_Update_ImmutableShortName(t *testing.T) {
+func TestAPI_Update_ShortNameAllowed(t *testing.T) {
 	resetLinks(t)
 
-	a := doJSON(t, http.MethodPost, "/api/links", map[string]any{
+	created := doJSON(t, http.MethodPost, "/api/links", map[string]any{
 		"original_url": "https://example.com/a",
 		"short_name":   "aaaa",
 	}, http.StatusCreated)
 
-	b := doJSON(t, http.MethodPost, "/api/links", map[string]any{
+	id := asInt64(t, created["id"])
+	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
+		"original_url": "https://example.com/a2",
+		"short_name":   "bbbb",
+	}, http.StatusOK)
+
+	require.Equal(t, "bbbb", asString(t, updated["short_name"]))
+	require.Equal(t, "http://localhost:8080/r/bbbb", asString(t, updated["short_url"]))
+	require.Equal(t, "https://example.com/a2", asString(t, updated["original_url"]))
+}
+
+func TestAPI_Update_ShortNameMissing_Generated(t *testing.T) {
+	resetLinks(t)
+
+	created := doJSON(t, http.MethodPost, "/api/links", map[string]any{
+		"original_url": "https://example.com/a",
+		"short_name":   "aaaa",
+	}, http.StatusCreated)
+
+	id := asInt64(t, created["id"])
+	originalShort := asString(t, created["short_name"])
+
+	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
+		"original_url": "https://example.com/a2",
+	}, http.StatusOK)
+
+	updatedShort := asString(t, updated["short_name"])
+	require.NotEqual(t, originalShort, updatedShort)
+	require.Equal(t, "http://localhost:8080/r/"+updatedShort, asString(t, updated["short_url"]))
+}
+
+func TestAPI_Update_ShortNameEmpty_Generated(t *testing.T) {
+	resetLinks(t)
+
+	created := doJSON(t, http.MethodPost, "/api/links", map[string]any{
+		"original_url": "https://example.com/a",
+		"short_name":   "aaaa",
+	}, http.StatusCreated)
+
+	id := asInt64(t, created["id"])
+	originalShort := asString(t, created["short_name"])
+
+	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
+		"original_url": "https://example.com/a2",
+		"short_name":   "",
+	}, http.StatusOK)
+
+	updatedShort := asString(t, updated["short_name"])
+	require.NotEqual(t, originalShort, updatedShort)
+	require.Equal(t, "http://localhost:8080/r/"+updatedShort, asString(t, updated["short_url"]))
+}
+
+func TestAPI_Update_ShortNameConflict(t *testing.T) {
+	resetLinks(t)
+
+	first := doJSON(t, http.MethodPost, "/api/links", map[string]any{
+		"original_url": "https://example.com/a",
+		"short_name":   "aaaa",
+	}, http.StatusCreated)
+
+	second := doJSON(t, http.MethodPost, "/api/links", map[string]any{
 		"original_url": "https://example.com/b",
 		"short_name":   "bbbb",
 	}, http.StatusCreated)
 
-	bid := asInt64(t, b["id"])
-	target := asString(t, a["short_name"])
+	sid := asInt64(t, second["id"])
+	target := asString(t, first["short_name"])
 
-	doJSONExpectError(t, http.MethodPut, "/api/links/"+itoa(bid), map[string]any{
+	doJSONExpectError(t, http.MethodPut, "/api/links/"+itoa(sid), map[string]any{
 		"original_url": "https://example.com/b2",
 		"short_name":   target,
-	}, http.StatusUnprocessableEntity)
+	}, http.StatusConflict)
 }
 
 func TestAPI_ValidationAndBadJSON(t *testing.T) {
@@ -346,11 +409,6 @@ func TestAPI_Create_AutoShortName(t *testing.T) {
 		"original_url": "https://example.com/auto",
 		"short_name":   "",
 	})
-
-	// if API does not support it, skip
-	if rec.Code == http.StatusBadRequest {
-		t.Skip("API does not support auto short_name generation")
-	}
 
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
