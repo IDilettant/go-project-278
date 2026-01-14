@@ -180,60 +180,86 @@ func TestServiceCreate_ExplicitShortNameValidation(t *testing.T) {
 	})
 }
 
-func TestServiceUpdate_ImmutableShortName(t *testing.T) {
+func TestServiceUpdate_AutoShortNameRetries(t *testing.T) {
+	ctx := context.Background()
+	var calls int
+	var lastShortName string
+
+	repo := &stubRepo{
+		t: t,
+		getByIDFunc: func(ctx context.Context, id int64) (domain.Link, error) {
+			return domain.Link{ID: id, ShortName: "abcd"}, nil
+		},
+		updateFunc: func(ctx context.Context, id int64, originalURL, shortName string) (domain.Link, error) {
+			calls++
+			lastShortName = shortName
+			if calls < 3 {
+				return domain.Link{}, domain.ErrShortNameConflict
+			}
+
+			return domain.Link{ID: id, OriginalURL: originalURL, ShortName: shortName}, nil
+		},
+	}
+
+	svc := New(repo)
+	link, err := svc.Update(ctx, 1, "https://example.com/new", "")
+	require.NoError(t, err)
+	require.Equal(t, 3, calls)
+	require.NoError(t, domain.ValidateShortName(lastShortName))
+	require.NotEqual(t, "abcd", lastShortName)
+	require.Equal(t, lastShortName, link.ShortName)
+}
+
+func TestServiceUpdate_ExplicitShortName(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("empty short_name keeps existing", func(t *testing.T) {
-		repo := &stubRepo{
-			t: t,
-			getByIDFunc: func(ctx context.Context, id int64) (domain.Link, error) {
-				return domain.Link{ID: id, ShortName: "abcd"}, nil
-			},
-			updateFunc: func(ctx context.Context, id int64, originalURL, shortName string) (domain.Link, error) {
-				require.Equal(t, "abcd", shortName)
-				return domain.Link{ID: id, OriginalURL: originalURL, ShortName: shortName}, nil
-			},
-		}
+	repo := &stubRepo{
+		t: t,
+		updateFunc: func(ctx context.Context, id int64, originalURL, shortName string) (domain.Link, error) {
+			require.Equal(t, "zzzz", shortName)
+			return domain.Link{ID: id, OriginalURL: originalURL, ShortName: shortName}, nil
+		},
+	}
 
-		svc := New(repo)
-		link, err := svc.Update(ctx, 1, "https://example.com/new", "")
-		require.NoError(t, err)
-		require.Equal(t, "abcd", link.ShortName)
-	})
+	svc := New(repo)
+	link, err := svc.Update(ctx, 1, "https://example.com/new", "zzzz")
+	require.NoError(t, err)
+	require.Equal(t, "zzzz", link.ShortName)
+}
 
-	t.Run("different short_name rejected", func(t *testing.T) {
-		repo := &stubRepo{
-			t: t,
-			getByIDFunc: func(ctx context.Context, id int64) (domain.Link, error) {
-				return domain.Link{ID: id, ShortName: "abcd"}, nil
-			},
-			updateFunc: func(ctx context.Context, id int64, originalURL, shortName string) (domain.Link, error) {
-				t.Fatalf("Update should not be called")
-				return domain.Link{}, nil
-			},
-		}
+func TestServiceUpdate_InvalidShortName(t *testing.T) {
+	ctx := context.Background()
 
-		svc := New(repo)
-		_, err := svc.Update(ctx, 1, "https://example.com/new", "efgh")
-		require.ErrorIs(t, err, domain.ErrShortNameImmutable)
-	})
+	repo := &stubRepo{
+		t: t,
+		updateFunc: func(ctx context.Context, id int64, originalURL, shortName string) (domain.Link, error) {
+			t.Fatalf("Update should not be called")
+			return domain.Link{}, nil
+		},
+	}
 
-	t.Run("invalid stored short_name rejected", func(t *testing.T) {
-		repo := &stubRepo{
-			t: t,
-			getByIDFunc: func(ctx context.Context, id int64) (domain.Link, error) {
-				return domain.Link{ID: id, ShortName: "ab_cd"}, nil
-			},
-			updateFunc: func(ctx context.Context, id int64, originalURL, shortName string) (domain.Link, error) {
-				t.Fatalf("Update should not be called")
-				return domain.Link{}, nil
-			},
-		}
+	svc := New(repo)
+	_, err := svc.Update(ctx, 1, "https://example.com/new", "ab_cd")
+	require.ErrorIs(t, err, domain.ErrInvalidShortName)
+}
 
-		svc := New(repo)
-		_, err := svc.Update(ctx, 1, "https://example.com/new", "")
-		require.ErrorIs(t, err, domain.ErrInvalidShortName)
-	})
+func TestServiceUpdate_NotFound(t *testing.T) {
+	ctx := context.Background()
+
+	repo := &stubRepo{
+		t: t,
+		getByIDFunc: func(ctx context.Context, id int64) (domain.Link, error) {
+			return domain.Link{}, domain.ErrNotFound
+		},
+		updateFunc: func(ctx context.Context, id int64, originalURL, shortName string) (domain.Link, error) {
+			t.Fatalf("Update should not be called")
+			return domain.Link{}, nil
+		},
+	}
+
+	svc := New(repo)
+	_, err := svc.Update(ctx, 1, "https://example.com/new", "")
+	require.ErrorIs(t, err, domain.ErrNotFound)
 }
 
 func TestServiceUpdate_InvalidOriginalURL(t *testing.T) {
