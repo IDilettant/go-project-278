@@ -114,15 +114,8 @@ func (s *Service) Update(ctx context.Context, id int64, originalURL, shortName s
 		return domain.Link{}, err
 	}
 
-	existing, err := s.repo.GetByID(ctx, id)
-	if err != nil {
-		return domain.Link{}, fmt.Errorf("links get by id: %w", err)
-	}
-
 	if shortName == "" {
-		shortName = existing.ShortName
-	} else if shortName != existing.ShortName {
-		return domain.Link{}, domain.ErrShortNameImmutable
+		return s.updateWithGeneratedShortName(ctx, id, originalURL)
 	}
 
 	if err := domain.ValidateShortName(shortName); err != nil {
@@ -143,6 +136,41 @@ func (s *Service) Delete(ctx context.Context, id int64) error {
 	}
 
 	return nil
+}
+
+func (s *Service) updateWithGeneratedShortName(
+	ctx context.Context,
+	id int64,
+	originalURL string,
+) (domain.Link, error) {
+	existing, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return domain.Link{}, fmt.Errorf("links get by id: %w", err)
+	}
+
+	for range autoShortNameAttempts {
+		gen, err := generateShortName()
+		if err != nil {
+			return domain.Link{}, fmt.Errorf("links generate short name: %w", err)
+		}
+
+		if gen == existing.ShortName {
+			continue
+		}
+
+		link, err := s.repo.Update(ctx, id, originalURL, gen)
+		if err == domain.ErrShortNameConflict {
+			continue
+		}
+
+		if err != nil {
+			return domain.Link{}, fmt.Errorf("links update: %w", err)
+		}
+
+		return link, nil
+	}
+
+	return domain.Link{}, fmt.Errorf("links update: %w", domain.ErrShortNameConflict)
 }
 
 func (s *Service) createWithGeneratedShortName(
