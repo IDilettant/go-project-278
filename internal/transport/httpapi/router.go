@@ -41,6 +41,8 @@ func NewRouter(deps RouterDeps) *gin.Engine {
 
 	r.NoRoute(h.NotFound)
 
+	r.GET("/ping", h.Ping)
+
 	api := r.Group("/api")
 	{
 		api.GET(linksPath, h.ListLinks)
