@@ -9,10 +9,11 @@ import (
 
 	"github.com/getsentry/sentry-go"
 
+	"code/internal/adapters/http"
+	pgrepo "code/internal/adapters/postgres"
 	"code/internal/app/links"
-	"code/internal/config"
-	"code/internal/repository/postgres"
-	"code/internal/transport/httpapi"
+	"code/internal/platform/config"
+	"code/internal/platform/postgres"
 )
 
 // App is a composition root for the HTTP API.
@@ -37,7 +38,7 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
 
-	repo := postgres.NewRepo(db)
+	repo := pgrepo.NewRepo(db)
 	svc := links.New(repo)
 
 	router := httpapi.NewRouter(httpapi.RouterDeps{

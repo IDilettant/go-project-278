@@ -47,13 +47,6 @@ func problemFromError(err error) Problem {
 			Status: http.StatusConflict,
 			Detail: "short_name already exists",
 		}
-	case errors.Is(err, domain.ErrShortNameImmutable):
-		return Problem{
-			Type:   ProblemTypeValidation,
-			Title:  validationTitle,
-			Status: http.StatusUnprocessableEntity,
-			Detail: "short_name is immutable",
-		}
 	case errors.Is(err, context.DeadlineExceeded):
 		return Problem{
 			Type:   ProblemTypeTimeout,

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	pgrepo "code/internal/repository/postgres"
+	"code/internal/platform/postgres"
 )
 
 type DBRetryConfig struct {
@@ -21,13 +21,13 @@ func DefaultDBRetryConfig() DBRetryConfig {
 	}
 }
 
-func OpenDBWithRetry(ctx context.Context, cfg pgrepo.OpenConfig, rc DBRetryConfig) (*sql.DB, error) {
+func OpenDBWithRetry(ctx context.Context, cfg postgres.OpenConfig, rc DBRetryConfig) (*sql.DB, error) {
 	deadline := time.Now().Add(rc.Timeout)
 
 	var lastErr error
-	
+
 	for time.Now().Before(deadline) {
-		db, err := pgrepo.Open(ctx, cfg)
+		db, err := postgres.Open(ctx, cfg)
 		if err == nil {
 			return db, nil
 		}

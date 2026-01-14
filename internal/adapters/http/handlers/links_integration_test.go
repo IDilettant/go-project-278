@@ -24,10 +24,12 @@ import (
 	tcpg "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	httpapi "code/internal/adapters/http"
+	pgrepo "code/internal/adapters/postgres"
 	"code/internal/app/links"
-	"code/internal/config"
-	pgrepo "code/internal/repository/postgres"
-	"code/internal/transport/httpapi"
+	"code/internal/platform/config"
+	"code/internal/platform/postgres"
+	"code/internal/testutils"
 )
 
 var (
@@ -71,12 +73,14 @@ func run(m *testing.M) int {
 	}
 
 	// open via production helper -> covers postgres.Open
-	db, err = openDBWithRetry(tcCtx, pgrepo.OpenConfig{
+	rc := testutils.DefaultDBRetryConfig()
+	rc.Timeout = 10 * time.Second
+	db, err = testutils.OpenDBWithRetry(tcCtx, postgres.OpenConfig{
 		DSN:             dsn,
 		MaxOpenConns:    5,
 		MaxIdleConns:    5,
 		ConnMaxLifetime: 5 * time.Minute,
-	}, 10*time.Second)
+	}, rc)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "open db:", err)
 
@@ -137,9 +141,10 @@ func TestAPI_CRUD_HappyPath(t *testing.T) {
 
 	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
 		"original_url": "https://example.com/updated",
+		"short_name":   "updated",
 	}, http.StatusOK)
 	updatedShort := asString(t, updated["short_name"])
-	require.NotEqual(t, originalShort, updatedShort)
+	require.Equal(t, "updated", updatedShort)
 	require.Equal(t, "http://localhost:8080/r/"+updatedShort, asString(t, updated["short_url"]))
 
 	doNoContent(t, http.MethodDelete, "/api/links/"+itoa(id), http.StatusNoContent)
@@ -313,7 +318,7 @@ func TestAPI_Update_ShortNameAllowed(t *testing.T) {
 	require.Equal(t, "https://example.com/a2", asString(t, updated["original_url"]))
 }
 
-func TestAPI_Update_ShortNameMissing_Generated(t *testing.T) {
+func TestAPI_Update_ShortNameMissing_Invalid(t *testing.T) {
 	resetLinks(t)
 
 	created := doJSON(t, http.MethodPost, "/api/links", map[string]any{
@@ -322,18 +327,13 @@ func TestAPI_Update_ShortNameMissing_Generated(t *testing.T) {
 	}, http.StatusCreated)
 
 	id := asInt64(t, created["id"])
-	originalShort := asString(t, created["short_name"])
 
-	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
+	doJSONExpectError(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
 		"original_url": "https://example.com/a2",
-	}, http.StatusOK)
-
-	updatedShort := asString(t, updated["short_name"])
-	require.NotEqual(t, originalShort, updatedShort)
-	require.Equal(t, "http://localhost:8080/r/"+updatedShort, asString(t, updated["short_url"]))
+	}, http.StatusBadRequest)
 }
 
-func TestAPI_Update_ShortNameEmpty_Generated(t *testing.T) {
+func TestAPI_Update_ShortNameEmpty_Invalid(t *testing.T) {
 	resetLinks(t)
 
 	created := doJSON(t, http.MethodPost, "/api/links", map[string]any{
@@ -342,16 +342,11 @@ func TestAPI_Update_ShortNameEmpty_Generated(t *testing.T) {
 	}, http.StatusCreated)
 
 	id := asInt64(t, created["id"])
-	originalShort := asString(t, created["short_name"])
 
-	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
+	doJSONExpectError(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
 		"original_url": "https://example.com/a2",
 		"short_name":   "",
-	}, http.StatusOK)
-
-	updatedShort := asString(t, updated["short_name"])
-	require.NotEqual(t, originalShort, updatedShort)
-	require.Equal(t, "http://localhost:8080/r/"+updatedShort, asString(t, updated["short_url"]))
+	}, http.StatusBadRequest)
 }
 
 func TestAPI_Update_ShortNameConflict(t *testing.T) {

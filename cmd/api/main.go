@@ -9,8 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"code/internal/bootstrap/apiapp"
-	"code/internal/config"
+	"code/internal/assembly/apiapp"
+	"code/internal/platform/config"
 )
 
 func main() {

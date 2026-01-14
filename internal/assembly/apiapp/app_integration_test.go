@@ -4,22 +4,20 @@ package apiapp_test
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib" // register pgx driver for database/sql
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	tcpg "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"code/internal/bootstrap/apiapp"
-	"code/internal/config"
+	"code/internal/assembly/apiapp"
+	"code/internal/platform/config"
+	"code/internal/platform/postgres"
 	"code/internal/testutils"
 )
 
@@ -42,7 +40,15 @@ func TestApp_New_Run_Close(t *testing.T) {
 	dsn, err := pgC.ConnectionString(ctx, "sslmode=disable")
 	require.NoError(t, err)
 
-	db, err := openDBWithRetry(ctx, dsn, 10*time.Second)
+	db, err := testutils.OpenDBWithRetry(ctx, postgres.OpenConfig{
+		DSN:             dsn,
+		MaxOpenConns:    5,
+		MaxIdleConns:    5,
+		ConnMaxLifetime: 5 * time.Minute,
+	}, testutils.DBRetryConfig{
+		Timeout: 10 * time.Second,
+		Backoff: 200 * time.Millisecond,
+	})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
@@ -72,50 +78,6 @@ func TestApp_New_Run_Close(t *testing.T) {
 
 	err = app.Run(runCtx)
 	require.NoError(t, err)
-}
-
-func pingWithTimeout(ctx context.Context, db *sql.DB, timeout time.Duration) error {
-	pctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	return db.PingContext(pctx)
-}
-
-func openDBWithRetry(ctx context.Context, dsn string, timeout time.Duration) (*sql.DB, error) {
-	deadline := time.Now().Add(timeout)
-	var lastErr error
-
-	for time.Now().Before(deadline) {
-		if err := ctx.Err(); err != nil {
-			return nil, fmt.Errorf("open db with retry (timeout=%s): %w", timeout, err)
-		}
-
-		db, err := sql.Open("pgx", dsn)
-		if err != nil {
-			lastErr = err
-			if err := testutils.Sleep(ctx, 200*time.Millisecond); err != nil {
-				return nil, fmt.Errorf("open db with retry (timeout=%s): %w", timeout, err)
-			}
-
-			continue
-		}
-
-		if err := pingWithTimeout(ctx, db, 2*time.Second); err == nil {
-			return db, nil
-		} else {
-			lastErr = err
-		}
-
-		_ = db.Close()
-		if err := testutils.Sleep(ctx, 200*time.Millisecond); err != nil {
-			return nil, fmt.Errorf("open db with retry (timeout=%s): %w", timeout, err)
-		}
-	}
-
-	if lastErr == nil {
-		lastErr = context.DeadlineExceeded
-	}
-
-	return nil, fmt.Errorf("open db with retry (timeout=%s): %w", timeout, lastErr)
 }
 
 func projectRoot(t *testing.T) string {

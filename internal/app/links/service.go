@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"code/internal/domain"
@@ -12,14 +11,12 @@ import (
 
 const (
 	autoShortNameAttempts = 5
-
-	shortNameRandBytes = 6
-	shortNameLen       = 8
+	shortNameLen          = 8
 
 	createErrWrapFmt = "links create: %w"
-)
 
-var shortNameAlphabet = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	shortNameAlphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+)
 
 type Service struct {
 	repo Repo
@@ -28,6 +25,8 @@ type Service struct {
 func New(repo Repo) *Service {
 	return &Service{repo: repo}
 }
+
+var _ UseCase = (*Service)(nil)
 
 func (s *Service) ListAll(ctx context.Context) ([]domain.Link, error) {
 	items, err := s.repo.ListAll(ctx)
@@ -114,10 +113,6 @@ func (s *Service) Update(ctx context.Context, id int64, originalURL, shortName s
 		return domain.Link{}, err
 	}
 
-	if shortName == "" {
-		return s.updateWithGeneratedShortName(ctx, id, originalURL)
-	}
-
 	if err := domain.ValidateShortName(shortName); err != nil {
 		return domain.Link{}, err
 	}
@@ -136,41 +131,6 @@ func (s *Service) Delete(ctx context.Context, id int64) error {
 	}
 
 	return nil
-}
-
-func (s *Service) updateWithGeneratedShortName(
-	ctx context.Context,
-	id int64,
-	originalURL string,
-) (domain.Link, error) {
-	existing, err := s.repo.GetByID(ctx, id)
-	if err != nil {
-		return domain.Link{}, fmt.Errorf("links get by id: %w", err)
-	}
-
-	for range autoShortNameAttempts {
-		gen, err := generateShortName()
-		if err != nil {
-			return domain.Link{}, fmt.Errorf("links generate short name: %w", err)
-		}
-
-		if gen == existing.ShortName {
-			continue
-		}
-
-		link, err := s.repo.Update(ctx, id, originalURL, gen)
-		if err == domain.ErrShortNameConflict {
-			continue
-		}
-
-		if err != nil {
-			return domain.Link{}, fmt.Errorf("links update: %w", err)
-		}
-
-		return link, nil
-	}
-
-	return domain.Link{}, fmt.Errorf("links update: %w", domain.ErrShortNameConflict)
 }
 
 func (s *Service) createWithGeneratedShortName(
@@ -199,16 +159,30 @@ func (s *Service) createWithGeneratedShortName(
 }
 
 func generateShortName() (string, error) {
-	out := make([]rune, shortNameLen)
-	max := big.NewInt(int64(len(shortNameAlphabet)))
+	alphaLen := len(shortNameAlphabet)
+	cutoff := (256 / alphaLen) * alphaLen
 
-	for i := range shortNameLen {
-		n, err := rand.Int(rand.Reader, max)
-		if err != nil {
-			return "", fmt.Errorf("rand int: %w", err)
+	out := make([]byte, shortNameLen)
+	filled := 0
+
+	var buf [32]byte
+	for filled < shortNameLen {
+		if _, err := rand.Read(buf[:]); err != nil {
+			return "", fmt.Errorf("rand read: %w", err)
 		}
 
-		out[i] = shortNameAlphabet[n.Int64()]
+		for _, b := range buf {
+			if filled >= shortNameLen {
+				break
+			}
+
+			if int(b) >= cutoff {
+				continue
+			}
+
+			out[filled] = shortNameAlphabet[int(b)%alphaLen]
+			filled++
+		}
 	}
 
 	return string(out), nil

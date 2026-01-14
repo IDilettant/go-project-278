@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"code/internal/app/links"
-	"code/internal/transport/httpapi/handlers"
-	"code/internal/transport/httpapi/middleware"
+	"code/internal/adapters/http/handlers"
+	"code/internal/adapters/http/middleware"
 )
 
 type RouterDeps struct {

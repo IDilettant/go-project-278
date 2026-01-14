@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"code/internal/adapters/http/dto"
 	"code/internal/domain"
-	"code/internal/transport/httpapi/dto"
 )
 
 type CreateLinkRequest struct {
@@ -62,8 +62,8 @@ func (h *Handler) ListLinks(c *gin.Context) {
 
 func (h *Handler) CreateLink(c *gin.Context) {
 	var req CreateLinkRequest
-	
-	err := c.ShouldBindJSON(&req)
+
+	err := bindJSONStrict(c, &req)
 	if err != nil {
 		badJSON(c)
 

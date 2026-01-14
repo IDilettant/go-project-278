@@ -14,7 +14,7 @@ import (
 	"code/internal/app/links"
 	"code/internal/domain"
 	"code/internal/testutils"
-	"code/internal/transport/httpapi"
+	"code/internal/adapters/http"
 )
 
 type timeoutRepo struct{}

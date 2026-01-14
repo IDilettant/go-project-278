@@ -4,18 +4,14 @@ package handlers_test
 
 import (
 	"bytes"
-	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
-	pgrepo "code/internal/repository/postgres"
 	"code/internal/testutils"
 )
 
@@ -92,13 +88,6 @@ func requireProblem(t *testing.T, rec *httptest.ResponseRecorder, wantStatus int
 	t.Helper()
 
 	return testutils.RequireProblem(t, rec.Result(), wantStatus, wantType)
-}
-
-func openDBWithRetry(ctx context.Context, cfg pgrepo.OpenConfig, timeout time.Duration) (*sql.DB, error) {
-	rc := testutils.DefaultDBRetryConfig()
-	rc.Timeout = timeout
-
-	return testutils.OpenDBWithRetry(ctx, cfg, rc)
 }
 
 func itoa(v int64) string { return fmt.Sprintf("%d", v) }

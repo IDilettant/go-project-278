@@ -10,7 +10,7 @@ import (
 
 	"code/internal/app/links"
 	"code/internal/domain"
-	"code/internal/repository/postgres/sqlcgen"
+	"code/internal/adapters/postgres/sqlcgen"
 )
 
 // PostgreSQL SQLSTATE error codes.

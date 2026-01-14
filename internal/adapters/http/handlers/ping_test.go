@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 
-	"code/internal/transport/httpapi/handlers"
+	"code/internal/adapters/http/handlers"
 )
 
 func TestPing(t *testing.T) {

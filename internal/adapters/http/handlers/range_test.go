@@ -3,7 +3,7 @@ package handlers_test
 import (
 	"testing"
 
-	"code/internal/transport/httpapi/handlers"
+	"code/internal/adapters/http/handlers"
 )
 
 func TestParseRangeParam(t *testing.T) {

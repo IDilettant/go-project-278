@@ -3,9 +3,9 @@ version: "2"
 sql:
   - engine: postgresql
     schema: db/migrations
-    queries: internal/repository/postgres/sql/queries
+    queries: internal/adapters/postgres/sql/queries
     gen:
       go:
         package: sqlcgen
-        out: internal/repository/postgres/sqlcgen
+        out: internal/adapters/postgres/sqlcgen
         sql_package: database/sql

@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"code/internal/config"
+	"code/internal/platform/config"
 )
 
 func TestLoad_MissingRequired(t *testing.T) {
