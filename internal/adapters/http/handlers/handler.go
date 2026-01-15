@@ -25,8 +25,8 @@ func (h *Handler) fail(c *gin.Context, err error) {
 func (h *Handler) NotFound(c *gin.Context) {
 	problems.WriteProblem(c, problems.Problem{
 		Type:   problems.ProblemTypeNotFound,
-		Title:  "Not Found",
+		Title:  problems.TitleNotFound,
 		Status: http.StatusNotFound,
-		Detail: "not found",
+		Detail: problems.DetailNotFound,
 	})
 }
