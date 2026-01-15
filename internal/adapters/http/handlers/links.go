@@ -59,7 +59,7 @@ func (h *Handler) ListLinks(c *gin.Context) {
 			c.Header("Content-Range", fmt.Sprintf("links %d-%d/%d", rng.Start, end, total))
 		}
 	}
-	
+
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -118,9 +118,9 @@ func (h *Handler) UpdateLink(c *gin.Context) {
 	if req.ShortName == "" || strings.TrimSpace(req.ShortName) == "" {
 		problems.WriteProblem(c, problems.Problem{
 			Type:   problems.ProblemTypeValidation,
-			Title:  problems.ValidationTitle,
+			Title:  problems.TitleValidation,
 			Status: http.StatusBadRequest,
-			Detail: "invalid short_name",
+			Detail: problems.DetailInvalidShortName,
 		})
 
 		return
@@ -157,9 +157,9 @@ func parseID(c *gin.Context) (int64, bool) {
 	if err != nil || id <= 0 {
 		problems.WriteProblem(c, problems.Problem{
 			Type:   problems.ProblemTypeValidation,
-			Title:  problems.ValidationTitle,
+			Title:  problems.TitleValidation,
 			Status: http.StatusBadRequest,
-			Detail: "invalid id",
+			Detail: problems.DetailInvalidID,
 		})
 
 		return 0, false
