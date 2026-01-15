@@ -4,19 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	ContentTypeProblemJSON = "application/problem+json"
-
-	ProblemTypeValidation  = "validation_error"
-	ProblemTypeInvalidJSON = "invalid_json"
-	ProblemTypeNotFound    = "about:blank"
-	ProblemTypeConflict    = "conflict"
-	ProblemTypeTimeout     = "timeout"
-	ProblemTypeInternal    = "internal_error"
-
-	ValidationTitle = "Validation error"
-)
-
 type Problem struct {
 	Type   string `json:"type" example:"validation_error"`
 	Title  string `json:"title" example:"Validation error"`
