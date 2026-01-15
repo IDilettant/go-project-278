@@ -9,7 +9,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 
-	"code/internal/adapters/http"
+	httpapi "code/internal/adapters/http"
 	pgrepo "code/internal/adapters/postgres"
 	"code/internal/app/links"
 	"code/internal/platform/config"
@@ -77,27 +77,37 @@ func (a *App) Run(ctx context.Context) error {
 	}()
 
 	select {
-	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(ctx, a.cfg.HTTPShutdownTimeout)
-		defer cancel()
-
-		if err := srv.Shutdown(shutdownCtx); err != nil {
-			return fmt.Errorf("shutdown http server: %w", err)
-		}
-
-		// Wait for ListenAndServe to return.
-		err := <-errCh
-		if errors.Is(err, http.ErrServerClosed) {
-			return nil
-		}
-
-		return err
-
 	case err := <-errCh:
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
 
-		return err
+		return fmt.Errorf("http server: %w", err)
+
+	case <-ctx.Done():
+		srv.SetKeepAlivesEnabled(false)
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), a.cfg.HTTPShutdownTimeout)
+		defer cancel()
+
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			_ = srv.Close()
+			if errors.Is(err, context.DeadlineExceeded) {
+				return fmt.Errorf("http shutdown timed out; forced close: %w", err)
+			}
+
+			return fmt.Errorf("http shutdown failed; forced close: %w", err)
+		}
+
+		select {
+		case err := <-errCh:
+			if errors.Is(err, http.ErrServerClosed) {
+				return nil
+			}
+
+			return fmt.Errorf("http server stopped with error: %w", err)
+		default:
+			return nil
+		}
 	}
 }
