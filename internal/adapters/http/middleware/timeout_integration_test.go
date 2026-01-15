@@ -11,10 +11,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	httpapi "code/internal/adapters/http"
 	"code/internal/app/links"
 	"code/internal/domain"
 	"code/internal/testutils"
-	"code/internal/adapters/http"
 )
 
 type timeoutRepo struct{}
@@ -70,5 +70,5 @@ func TestAPI_RequestTimeout(t *testing.T) {
 	require.Equal(t, http.StatusGatewayTimeout, rec.Code)
 	p := testutils.RequireProblem(t, rec.Result(), http.StatusGatewayTimeout, "timeout")
 	require.Equal(t, "Gateway Timeout", p.Title)
-	require.Equal(t, "", p.Detail)
+	require.Equal(t, "timeout", p.Detail)
 }

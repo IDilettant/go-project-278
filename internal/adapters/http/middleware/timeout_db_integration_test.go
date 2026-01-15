@@ -117,7 +117,7 @@ func TestAPI_RequestTimeout_CancelsDBQuery(t *testing.T) {
 	require.Equal(t, http.StatusGatewayTimeout, rec.Code)
 	p := testutils.RequireProblem(t, rec.Result(), http.StatusGatewayTimeout, "timeout")
 	require.Equal(t, "Gateway Timeout", p.Title)
-	require.Equal(t, "", p.Detail)
+	require.Equal(t, "timeout", p.Detail)
 
 	select {
 	case err := <-errCh:
