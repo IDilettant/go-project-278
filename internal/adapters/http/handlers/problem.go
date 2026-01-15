@@ -14,51 +14,51 @@ func problemFromError(err error) problems.Problem {
 	case errors.Is(err, domain.ErrNotFound):
 		return problems.Problem{
 			Type:   problems.ProblemTypeNotFound,
-			Title:  "Not Found",
+			Title:  problems.TitleNotFound,
 			Status: http.StatusNotFound,
-			Detail: "not found",
+			Detail: problems.DetailNotFound,
 		}
 	case errors.Is(err, domain.ErrInvalidURL):
 		return problems.Problem{
 			Type:   problems.ProblemTypeValidation,
-			Title:  problems.ValidationTitle,
+			Title:  problems.TitleValidation,
 			Status: http.StatusBadRequest,
-			Detail: "invalid url",
+			Detail: problems.DetailInvalidURL,
 		}
 	case errors.Is(err, domain.ErrInvalidShortName):
 		return problems.Problem{
 			Type:   problems.ProblemTypeValidation,
-			Title:  problems.ValidationTitle,
+			Title:  problems.TitleValidation,
 			Status: http.StatusBadRequest,
-			Detail: "invalid short_name",
+			Detail: problems.DetailInvalidShortName,
 		}
 	case errors.Is(err, domain.ErrShortNameConflict):
 		return problems.Problem{
 			Type:   problems.ProblemTypeConflict,
-			Title:  "Conflict",
+			Title:  problems.TitleConflict,
 			Status: http.StatusConflict,
-			Detail: "short_name already exists",
+			Detail: problems.DetailShortNameConflict,
 		}
 	case errors.Is(err, context.DeadlineExceeded):
 		return problems.Problem{
 			Type:   problems.ProblemTypeTimeout,
-			Title:  "Gateway Timeout",
+			Title:  problems.TitleGatewayTimeout,
 			Status: http.StatusGatewayTimeout,
-			Detail: "timeout",
+			Detail: problems.DetailTimeout,
 		}
 	case errors.Is(err, context.Canceled):
 		return problems.Problem{
-			Type:   "client_cancelled",
-			Title:  "Request Timeout",
+			Type:   problems.ProblemTypeCanceled,
+			Title:  problems.TitleRequestTimeout,
 			Status: http.StatusRequestTimeout,
-			Detail: "request canceled",
+			Detail: problems.DetailRequestCanceled,
 		}
 	default:
 		return problems.Problem{
 			Type:   problems.ProblemTypeInternal,
-			Title:  "Internal Server Error",
+			Title:  problems.TitleInternalError,
 			Status: http.StatusInternalServerError,
-			Detail: "internal error",
+			Detail: problems.DetailInternalError,
 		}
 	}
 }
