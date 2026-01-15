@@ -6,9 +6,9 @@ import (
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
 
-	"code/internal/app/links"
 	"code/internal/adapters/http/handlers"
 	"code/internal/adapters/http/middleware"
+	"code/internal/app/links"
 )
 
 type RouterDeps struct {
@@ -26,12 +26,14 @@ const (
 
 func NewRouter(deps RouterDeps) *gin.Engine {
 	r := gin.New()
-	r.Use(gin.Logger(), gin.Recovery())
+	r.Use(gin.Logger())
 
 	r.Use(sentrygin.New(sentrygin.Options{
 		Repanic: true,
 		Timeout: deps.SentryMiddlewareTimeout,
 	}))
+
+	r.Use(middleware.Recovery())
 
 	if deps.RequestTimeout > 0 {
 		r.Use(middleware.RequestTimeout(deps.RequestTimeout))
