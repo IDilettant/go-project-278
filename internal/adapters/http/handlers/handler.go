@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"code/internal/adapters/http/problems"
 	"code/internal/app/links"
 )
 
@@ -18,9 +19,14 @@ func New(svc links.UseCase, baseURL string) *Handler {
 }
 
 func (h *Handler) fail(c *gin.Context, err error) {
-	writeProblem(c, problemFromError(err))
+	problems.WriteProblem(c, problemFromError(err))
 }
 
 func (h *Handler) NotFound(c *gin.Context) {
-	writeProblem(c, Problem{Type: ProblemTypeNotFound, Title: "Not Found", Status: http.StatusNotFound})
+	problems.WriteProblem(c, problems.Problem{
+		Type:   problems.ProblemTypeNotFound,
+		Title:  "Not Found",
+		Status: http.StatusNotFound,
+		Detail: "not found",
+	})
 }

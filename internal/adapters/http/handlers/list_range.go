@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
+	"code/internal/adapters/http/problems"
 )
 
 type PageQuery struct {
@@ -34,9 +36,9 @@ func parseListRange(raw string) (Range, PageQuery, bool, error) {
 }
 
 func writeInvalidRange(c *gin.Context) {
-	writeProblem(c, Problem{
-		Type:   ProblemTypeValidation,
-		Title:  validationTitle,
+	problems.WriteProblem(c, problems.Problem{
+		Type:   problems.ProblemTypeValidation,
+		Title:  problems.ValidationTitle,
 		Status: http.StatusBadRequest,
 		Detail: "invalid range", // expected [start,count]
 	})
