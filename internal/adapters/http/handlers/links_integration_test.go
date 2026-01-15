@@ -124,20 +124,18 @@ func run(m *testing.M) int {
 func TestAPI_CRUD_HappyPath(t *testing.T) {
 	resetLinks(t)
 
-	created := doJSON(t, http.MethodPost, "/api/links", map[string]any{
-		"original_url": "https://example.com/long-url",
-		"short_name":   "exmpl",
-	}, http.StatusCreated)
+	createLink(t, "https://example.com/long-url", "exmpl")
 
+	list := doJSONArray(t, http.MethodGet, "/api/links", nil, http.StatusOK)
+	require.Len(t, list, 1)
+
+	created := list[0]
 	id := asInt64(t, created["id"])
 	originalShort := asString(t, created["short_name"])
 	require.Equal(t, "exmpl", originalShort)
 	require.Equal(t, "http://localhost:8080/r/"+originalShort, asString(t, created["short_url"]))
 
 	_ = doJSON(t, http.MethodGet, "/api/links/"+itoa(id), nil, http.StatusOK)
-
-	list := doJSONArray(t, http.MethodGet, "/api/links", nil, http.StatusOK)
-	require.Len(t, list, 1)
 
 	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
 		"original_url": "https://example.com/updated",
@@ -248,6 +246,7 @@ func TestAPI_CreateLink_ConcurrentConflict(t *testing.T) {
 		switch rec.Code {
 		case http.StatusCreated:
 			created++
+			require.NotEmpty(t, rec.Header().Get("Location"))
 		case http.StatusConflict:
 			conflicts++
 			p := requireProblem(t, rec, http.StatusConflict, "conflict")
@@ -265,12 +264,8 @@ func TestAPI_CreateLink_ConcurrentConflict(t *testing.T) {
 func TestAPI_Redirect(t *testing.T) {
 	resetLinks(t)
 
-	created := doJSON(t, http.MethodPost, "/api/links", map[string]any{
-		"original_url": "https://example.com/a",
-		"short_name":   "good",
-	}, http.StatusCreated)
-
-	short := asString(t, created["short_name"])
+	createLink(t, "https://example.com/a", "good")
+	short := "good"
 
 	req := httptest.NewRequest(http.MethodGet, "/r/"+short, nil)
 	rec := httptest.NewRecorder()
@@ -288,10 +283,7 @@ func TestAPI_Redirect(t *testing.T) {
 func TestAPI_Conflict_Create(t *testing.T) {
 	resetLinks(t)
 
-	doJSON(t, http.MethodPost, "/api/links", map[string]any{
-		"original_url": "https://example.com/1",
-		"short_name":   "dupe",
-	}, http.StatusCreated)
+	createLink(t, "https://example.com/1", "dupe")
 
 	doJSONExpectError(t, http.MethodPost, "/api/links", map[string]any{
 		"original_url": "https://example.com/2",
@@ -302,11 +294,9 @@ func TestAPI_Conflict_Create(t *testing.T) {
 func TestAPI_Update_ShortNameAllowed(t *testing.T) {
 	resetLinks(t)
 
-	created := doJSON(t, http.MethodPost, "/api/links", map[string]any{
-		"original_url": "https://example.com/a",
-		"short_name":   "aaaa",
-	}, http.StatusCreated)
+	createLink(t, "https://example.com/a", "aaaa")
 
+	created := getLinkByShortName(t, "aaaa")
 	id := asInt64(t, created["id"])
 	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
 		"original_url": "https://example.com/a2",
@@ -321,11 +311,9 @@ func TestAPI_Update_ShortNameAllowed(t *testing.T) {
 func TestAPI_Update_ShortNameMissing_Invalid(t *testing.T) {
 	resetLinks(t)
 
-	created := doJSON(t, http.MethodPost, "/api/links", map[string]any{
-		"original_url": "https://example.com/a",
-		"short_name":   "aaaa",
-	}, http.StatusCreated)
+	createLink(t, "https://example.com/a", "aaaa")
 
+	created := getLinkByShortName(t, "aaaa")
 	id := asInt64(t, created["id"])
 
 	doJSONExpectError(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
@@ -336,11 +324,9 @@ func TestAPI_Update_ShortNameMissing_Invalid(t *testing.T) {
 func TestAPI_Update_ShortNameEmpty_Invalid(t *testing.T) {
 	resetLinks(t)
 
-	created := doJSON(t, http.MethodPost, "/api/links", map[string]any{
-		"original_url": "https://example.com/a",
-		"short_name":   "aaaa",
-	}, http.StatusCreated)
+	createLink(t, "https://example.com/a", "aaaa")
 
+	created := getLinkByShortName(t, "aaaa")
 	id := asInt64(t, created["id"])
 
 	doJSONExpectError(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
@@ -352,16 +338,12 @@ func TestAPI_Update_ShortNameEmpty_Invalid(t *testing.T) {
 func TestAPI_Update_ShortNameConflict(t *testing.T) {
 	resetLinks(t)
 
-	first := doJSON(t, http.MethodPost, "/api/links", map[string]any{
-		"original_url": "https://example.com/a",
-		"short_name":   "aaaa",
-	}, http.StatusCreated)
+	createLink(t, "https://example.com/a", "aaaa")
 
-	second := doJSON(t, http.MethodPost, "/api/links", map[string]any{
-		"original_url": "https://example.com/b",
-		"short_name":   "bbbb",
-	}, http.StatusCreated)
+	createLink(t, "https://example.com/b", "bbbb")
 
+	first := getLinkByShortName(t, "aaaa")
+	second := getLinkByShortName(t, "bbbb")
 	sid := asInt64(t, second["id"])
 	target := asString(t, first["short_name"])
 
@@ -400,16 +382,9 @@ func TestAPI_ValidationAndBadJSON(t *testing.T) {
 func TestAPI_Create_AutoShortName(t *testing.T) {
 	resetLinks(t)
 
-	rec := doRequest(t, http.MethodPost, "/api/links", map[string]any{
-		"original_url": "https://example.com/auto",
-		"short_name":   "",
-	})
+	createLink(t, "https://example.com/auto", "")
 
-	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-
-	var created map[string]any
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
-
+	created := getSingleLink(t)
 	short := asString(t, created["short_name"])
 	require.True(t, shortNameRe.MatchString(short), "generated short_name must be alnum 4..32, got %q", short)
 
@@ -444,7 +419,7 @@ func TestAPI_Redirect_NotFound_404(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, rec.Code)
 	p := requireProblem(t, rec, http.StatusNotFound, "about:blank")
 	require.Equal(t, "Not Found", p.Title)
-	require.Equal(t, "", p.Detail)
+	require.Equal(t, "not found", p.Detail)
 }
 
 func resetLinks(t *testing.T) {
@@ -460,10 +435,7 @@ func seedLinks(t *testing.T, count int) {
 	for i := 0; i < count; i++ {
 		shortName := fmt.Sprintf("lnk%03d", i)
 		originalURL := fmt.Sprintf("https://example.com/%d", i)
-		doJSON(t, http.MethodPost, "/api/links", map[string]any{
-			"original_url": originalURL,
-			"short_name":   shortName,
-		}, http.StatusCreated)
+		createLink(t, originalURL, shortName)
 	}
 }
 

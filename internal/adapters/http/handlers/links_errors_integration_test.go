@@ -101,7 +101,7 @@ func TestLinksAPI_Errors(t *testing.T) {
 			status: http.StatusNotFound,
 			typeID: "about:blank",
 			title:  "Not Found",
-			detail: "",
+			detail: "not found",
 		},
 		{
 			name:   "not_found_delete",
@@ -110,7 +110,7 @@ func TestLinksAPI_Errors(t *testing.T) {
 			status: http.StatusNotFound,
 			typeID: "about:blank",
 			title:  "Not Found",
-			detail: "",
+			detail: "not found",
 		},
 	}
 
