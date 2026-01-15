@@ -19,8 +19,8 @@ type CreateLinkRequest struct {
 }
 
 type UpdateLinkRequest struct {
-	OriginalURL string  `json:"original_url" example:"https://example.com/updated"`
-	ShortName   *string `json:"short_name" example:"abc123"`
+	OriginalURL string `json:"original_url" example:"https://example.com/updated"`
+	ShortName   string `json:"short_name" example:"abc123"`
 }
 
 func (h *Handler) ListLinks(c *gin.Context) {
@@ -59,6 +59,7 @@ func (h *Handler) ListLinks(c *gin.Context) {
 			c.Header("Content-Range", fmt.Sprintf("links %d-%d/%d", rng.Start, end, total))
 		}
 	}
+	
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -114,7 +115,7 @@ func (h *Handler) UpdateLink(c *gin.Context) {
 		return
 	}
 
-	if req.ShortName == nil || strings.TrimSpace(*req.ShortName) == "" {
+	if req.ShortName == "" || strings.TrimSpace(req.ShortName) == "" {
 		problems.WriteProblem(c, problems.Problem{
 			Type:   problems.ProblemTypeValidation,
 			Title:  problems.ValidationTitle,
@@ -125,7 +126,7 @@ func (h *Handler) UpdateLink(c *gin.Context) {
 		return
 	}
 
-	link, err := h.svc.Update(c.Request.Context(), id, req.OriginalURL, *req.ShortName)
+	link, err := h.svc.Update(c.Request.Context(), id, req.OriginalURL, req.ShortName)
 	if err != nil {
 		h.fail(c, err)
 
