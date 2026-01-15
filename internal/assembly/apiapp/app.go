@@ -87,7 +87,7 @@ func (a *App) Run(ctx context.Context) error {
 	case <-ctx.Done():
 		srv.SetKeepAlivesEnabled(false)
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), a.cfg.HTTPShutdownTimeout)
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), a.cfg.HTTPShutdownTimeout)
 		defer cancel()
 
 		if err := srv.Shutdown(shutdownCtx); err != nil {
