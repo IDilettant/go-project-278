@@ -16,9 +16,9 @@ func Recovery() gin.HandlerFunc {
 
 		problems.WriteProblem(c, problems.Problem{
 			Type:   problems.ProblemTypeInternal,
-			Title:  "Internal Server Error",
+			Title:  problems.TitleInternalError,
 			Status: http.StatusInternalServerError,
-			Detail: "internal error",
+			Detail: problems.DetailInternalError,
 		})
 	})
 }
