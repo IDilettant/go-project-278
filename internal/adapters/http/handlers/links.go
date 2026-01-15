@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"code/internal/adapters/http/dto"
+	"code/internal/adapters/http/problems"
 	"code/internal/domain"
 )
 
@@ -17,8 +19,8 @@ type CreateLinkRequest struct {
 }
 
 type UpdateLinkRequest struct {
-	OriginalURL string `json:"original_url" example:"https://example.com/updated"`
-	ShortName   string `json:"short_name" example:"abc123"`
+	OriginalURL string  `json:"original_url" example:"https://example.com/updated"`
+	ShortName   *string `json:"short_name" example:"abc123"`
 }
 
 func (h *Handler) ListLinks(c *gin.Context) {
@@ -77,7 +79,8 @@ func (h *Handler) CreateLink(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, dto.FromDomain(link, h.baseURL))
+	c.Header("Location", fmt.Sprintf("/api/links/%d", link.ID))
+	c.Status(http.StatusCreated)
 }
 
 func (h *Handler) GetLink(c *gin.Context) {
@@ -103,7 +106,7 @@ func (h *Handler) UpdateLink(c *gin.Context) {
 	}
 
 	var req UpdateLinkRequest
-	
+
 	err := bindJSONStrict(c, &req)
 	if err != nil {
 		badJSON(c)
@@ -111,7 +114,18 @@ func (h *Handler) UpdateLink(c *gin.Context) {
 		return
 	}
 
-	link, err := h.svc.Update(c.Request.Context(), id, req.OriginalURL, req.ShortName)
+	if req.ShortName == nil || strings.TrimSpace(*req.ShortName) == "" {
+		problems.WriteProblem(c, problems.Problem{
+			Type:   problems.ProblemTypeValidation,
+			Title:  problems.ValidationTitle,
+			Status: http.StatusBadRequest,
+			Detail: "invalid short_name",
+		})
+
+		return
+	}
+
+	link, err := h.svc.Update(c.Request.Context(), id, req.OriginalURL, *req.ShortName)
 	if err != nil {
 		h.fail(c, err)
 
@@ -140,9 +154,9 @@ func (h *Handler) DeleteLink(c *gin.Context) {
 func parseID(c *gin.Context) (int64, bool) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || id <= 0 {
-		writeProblem(c, Problem{
-			Type:   ProblemTypeValidation,
-			Title:  validationTitle,
+		problems.WriteProblem(c, problems.Problem{
+			Type:   problems.ProblemTypeValidation,
+			Title:  problems.ValidationTitle,
 			Status: http.StatusBadRequest,
 			Detail: "invalid id",
 		})
