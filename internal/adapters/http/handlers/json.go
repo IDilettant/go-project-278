@@ -36,8 +36,8 @@ func bindJSONStrict(c *gin.Context, dst any) error {
 func badJSON(c *gin.Context) {
 	problems.WriteProblem(c, problems.Problem{
 		Type:   problems.ProblemTypeInvalidJSON,
-		Title:  http.StatusText(http.StatusBadRequest),
+		Title:  problems.TitleBadRequest,
 		Status: http.StatusBadRequest,
-		Detail: "invalid json",
+		Detail: problems.DetailInvalidJSON,
 	})
 }
