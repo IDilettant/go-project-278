@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -69,6 +71,58 @@ func doJSONArray(t *testing.T, method, path string, body any, want int) []map[st
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 
 	return out
+}
+
+func createLink(t *testing.T, originalURL, shortName string) int64 {
+	t.Helper()
+
+	payload := map[string]any{
+		"original_url": originalURL,
+	}
+	if shortName != "" {
+		payload["short_name"] = shortName
+	}
+
+	rec := doRequest(t, http.MethodPost, apiLinksPath, payload)
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	require.Empty(t, rec.Body.Bytes())
+
+	location := rec.Header().Get("Location")
+	require.NotEmpty(t, location)
+	require.True(t, strings.HasPrefix(location, apiLinksPath+"/"))
+
+	idStr := strings.TrimPrefix(location, apiLinksPath+"/")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	require.NoError(t, err)
+	require.Equal(t, fmt.Sprintf("%s/%d", apiLinksPath, id), location)
+
+	_ = doJSON(t, http.MethodGet, apiLinksPath+"/"+idStr, nil, http.StatusOK)
+
+	return id
+}
+
+func getSingleLink(t *testing.T) map[string]any {
+	t.Helper()
+
+	list := doJSONArray(t, http.MethodGet, apiLinksPath, nil, http.StatusOK)
+	require.Len(t, list, 1)
+
+	return list[0]
+}
+
+func getLinkByShortName(t *testing.T, shortName string) map[string]any {
+	t.Helper()
+
+	list := doJSONArray(t, http.MethodGet, apiLinksPath, nil, http.StatusOK)
+	for _, item := range list {
+		if asString(t, item["short_name"]) == shortName {
+			return item
+		}
+	}
+
+	require.Failf(t, "link not found", "short_name=%s", shortName)
+
+	return nil
 }
 
 func doNoContent(t *testing.T, method, path string, want int) {
