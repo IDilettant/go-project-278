@@ -3,6 +3,7 @@ package links
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -144,7 +145,7 @@ func (s *Service) createWithGeneratedShortName(
 		}
 
 		link, err := s.repo.Create(ctx, originalURL, gen)
-		if err == domain.ErrShortNameConflict {
+		if errors.Is(err, domain.ErrShortNameConflict) {
 			continue
 		}
 
@@ -155,7 +156,7 @@ func (s *Service) createWithGeneratedShortName(
 		return link, nil
 	}
 
-	return domain.Link{}, fmt.Errorf(createErrWrapFmt, domain.ErrShortNameConflict)
+	return domain.Link{}, domain.ErrShortNameConflict
 }
 
 func generateShortName() (string, error) {
