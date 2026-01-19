@@ -15,5 +15,27 @@ services:
       timeout: 3s
       retries: 20
 
+  migrate:
+    image: golang:1.23-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - gomodcache:/go/pkg/mod
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    command:
+      - sh
+      - -c
+      - >
+        go version &&
+        go env -w GOPROXY=https://proxy.golang.org,direct &&
+        go run github.com/pressly/goose/v3/cmd/goose@v3.26.0
+        -dir ./db/migrations postgres "$$DATABASE_URL_DOCKER" up
+    restart: "no"
+
 volumes:
   pgdata:
+  gomodcache:

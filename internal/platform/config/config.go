@@ -50,6 +50,8 @@ type Config struct {
 	HTTPIdleTimeout       time.Duration
 	HTTPShutdownTimeout   time.Duration
 	HTTPRequestTimeout    time.Duration
+
+	CORSAllowedOrigins []string
 }
 
 type durationSpec struct {
@@ -98,6 +100,8 @@ func Load() (Config, error) {
 	if err := loadHTTPServer(&cfg); err != nil {
 		return Config{}, err
 	}
+
+	loadCORS(&cfg)
 
 	return cfg, nil
 }
@@ -312,4 +316,20 @@ func loadHTTPServer(cfg *Config) error {
 	}
 
 	return nil
+}
+
+func loadCORS(cfg *Config) {
+	raw := env("CORS_ALLOWED_ORIGINS")
+	if raw == "" {
+		return
+	}
+
+	parts := strings.Split(raw, ",")
+	for _, part := range parts {
+		origin := strings.TrimSpace(part)
+		if origin == "" {
+			continue
+		}
+		cfg.CORSAllowedOrigins = append(cfg.CORSAllowedOrigins, origin)
+	}
 }

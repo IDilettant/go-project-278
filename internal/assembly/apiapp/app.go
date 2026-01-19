@@ -46,6 +46,7 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 		BaseURL:                 cfg.BaseURL,
 		SentryMiddlewareTimeout: cfg.SentryMiddlewareTimeout,
 		RequestTimeout:          cfg.HTTPRequestTimeout,
+		CORSAllowedOrigins:      cfg.CORSAllowedOrigins,
 	})
 
 	return &App{cfg: cfg, db: db, router: router}, nil

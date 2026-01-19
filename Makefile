@@ -26,18 +26,13 @@ dev:
 	$(load_env) air
 
 db-up:
-	docker compose up -d
+	docker compose up -d --remove-orphans db
 
 db-down:
 	docker compose down
 
 migrate-up:
-	$(load_env) \
-	goose -dir ./db/migrations postgres "$$DATABASE_URL" up
-
-migrate-down:
-	$(load_env) \
-	goose -dir ./db/migrations postgres "$$DATABASE_URL" down
+	docker compose run --rm migrate
 
 sqlc:
 	sqlc generate
@@ -54,5 +49,8 @@ docs-open-up:
 docs-down:
 	docker compose -f docker-compose.docs.yml down
 
+dev-all: db-up migrate-up
+	npm install
+	npx concurrently "make dev" "npx start-hexlet-url-shortener-frontend"
 
-.PHONY: test lint build dev sqlc docs migrate-up migrate-down db-up db-down
+.PHONY: test test-integration lint build cover dev db-up db-down migrate-up sqlc docs-open-up docs-down dev-all

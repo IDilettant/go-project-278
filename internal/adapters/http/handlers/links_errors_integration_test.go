@@ -42,6 +42,32 @@ func TestLinksAPI_Errors(t *testing.T) {
 			detail:  "invalid json",
 		},
 		{
+			name:   "strict_json_unknown_field",
+			method: http.MethodPost,
+			path:   apiLinksPath,
+			body: map[string]any{
+				"original_url": "https://example.com",
+				"extra":        "nope",
+			},
+			status: http.StatusBadRequest,
+			typeID: "invalid_json",
+			title:  "Bad Request",
+			detail: "invalid json",
+		},
+		{
+			name:   "strict_json_extra_object",
+			method: http.MethodPost,
+			path:   apiLinksPath,
+			headers: map[string]string{
+				"Content-Type": "application/json",
+			},
+			rawBody: `{"original_url":"https://example.com"}{"short_name":"good"}`,
+			status:  http.StatusBadRequest,
+			typeID:  "invalid_json",
+			title:   "Bad Request",
+			detail:  "invalid json",
+		},
+		{
 			name:   "invalid_range",
 			method: http.MethodGet,
 			path:   apiLinksPath + "?range=bad",

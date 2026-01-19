@@ -247,6 +247,10 @@ func TestAPI_CreateLink_ConcurrentConflict(t *testing.T) {
 		case http.StatusCreated:
 			created++
 			require.NotEmpty(t, rec.Header().Get("Location"))
+			var body map[string]any
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+			require.Equal(t, shortName, body["short_name"])
+			require.NotEmpty(t, body["short_url"])
 		case http.StatusConflict:
 			conflicts++
 			p := requireProblem(t, rec, http.StatusConflict, "conflict")
@@ -278,6 +282,19 @@ func TestAPI_Redirect(t *testing.T) {
 	rec2 := httptest.NewRecorder()
 	router.ServeHTTP(rec2, req2)
 	require.Equal(t, http.StatusNotFound, rec2.Code)
+}
+
+func TestAPI_Redirect_ByShortName_StatusAndLocation(t *testing.T) {
+	resetLinks(t)
+
+	createLink(t, "https://example.com/redirect", "redir")
+
+	req := httptest.NewRequest(http.MethodGet, "/r/redir", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusFound, rec.Code)
+	require.Equal(t, "https://example.com/redirect", rec.Header().Get("Location"))
 }
 
 func TestAPI_Conflict_Create(t *testing.T) {
@@ -351,6 +368,28 @@ func TestAPI_Update_ShortNameConflict(t *testing.T) {
 		"original_url": "https://example.com/b2",
 		"short_name":   target,
 	}, http.StatusConflict)
+}
+
+func TestAPI_Update_ShortNameConflict_ReturnsProblem(t *testing.T) {
+	resetLinks(t)
+
+	createLink(t, "https://example.com/a", "aaaa")
+	createLink(t, "https://example.com/b", "bbbb")
+
+	first := getLinkByShortName(t, "aaaa")
+	second := getLinkByShortName(t, "bbbb")
+	sid := asInt64(t, second["id"])
+	target := asString(t, first["short_name"])
+
+	rec := doRequest(t, http.MethodPut, "/api/links/"+itoa(sid), map[string]any{
+		"original_url": "https://example.com/b2",
+		"short_name":   target,
+	})
+
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	p := requireProblem(t, rec, http.StatusConflict, "conflict")
+	require.Equal(t, "Conflict", p.Title)
+	require.Equal(t, "short_name already exists", p.Detail)
 }
 
 func TestAPI_ValidationAndBadJSON(t *testing.T) {

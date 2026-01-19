@@ -1,0 +1,15 @@
+{
+  "name": "url-shortener",
+  "private": true,
+  "dependencies": {
+    "@hexlet/project-url-shortener-frontend": "^1.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  },
+  "scripts": {
+    "frontend": "start-hexlet-url-shortener-frontend",
+    "backend": "make dev",
+    "dev": "concurrently \"npm:backend\" \"npm:frontend\""
+  }
+}

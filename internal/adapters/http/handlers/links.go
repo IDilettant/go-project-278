@@ -81,7 +81,7 @@ func (h *Handler) CreateLink(c *gin.Context) {
 	}
 
 	c.Header("Location", fmt.Sprintf("/api/links/%d", link.ID))
-	c.Status(http.StatusCreated)
+	c.JSON(http.StatusCreated, dto.FromDomain(link, h.baseURL))
 }
 
 func (h *Handler) GetLink(c *gin.Context) {

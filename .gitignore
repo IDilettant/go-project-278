@@ -48,3 +48,7 @@ Thumbs.db
 *.swp
 *.kate-swp
 *~
+
+
+node_modules/
+npm-debug.log*

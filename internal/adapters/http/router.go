@@ -17,6 +17,7 @@ type RouterDeps struct {
 
 	SentryMiddlewareTimeout time.Duration
 	RequestTimeout          time.Duration
+	CORSAllowedOrigins      []string
 }
 
 const (
@@ -37,6 +38,10 @@ func NewRouter(deps RouterDeps) *gin.Engine {
 
 	if deps.RequestTimeout > 0 {
 		r.Use(middleware.RequestTimeout(deps.RequestTimeout))
+	}
+
+	if len(deps.CORSAllowedOrigins) > 0 {
+		r.Use(middleware.CORS(deps.CORSAllowedOrigins))
 	}
 
 	h := handlers.New(deps.Links, deps.BaseURL)

@@ -85,16 +85,32 @@ func createLink(t *testing.T, originalURL, shortName string) int64 {
 
 	rec := doRequest(t, http.MethodPost, apiLinksPath, payload)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	require.Empty(t, rec.Body.Bytes())
 
 	location := rec.Header().Get("Location")
 	require.NotEmpty(t, location)
 	require.True(t, strings.HasPrefix(location, apiLinksPath+"/"))
 
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+
+	id := asInt64(t, body["id"])
+	require.NotZero(t, id)
+	require.Equal(t, originalURL, asString(t, body["original_url"]))
+
+	gotShortName := asString(t, body["short_name"])
+	if shortName == "" {
+		require.Regexp(t, shortNameRe, gotShortName)
+	} else {
+		require.Equal(t, shortName, gotShortName)
+	}
+
+	require.Equal(t, fmt.Sprintf("%s/r/%s", "http://localhost:8080", gotShortName), asString(t, body["short_url"]))
+
 	idStr := strings.TrimPrefix(location, apiLinksPath+"/")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	require.NoError(t, err)
 	require.Equal(t, fmt.Sprintf("%s/%d", apiLinksPath, id), location)
+	require.Equal(t, id, asInt64(t, body["id"]))
 
 	_ = doJSON(t, http.MethodGet, apiLinksPath+"/"+idStr, nil, http.StatusOK)
 
