@@ -27,7 +27,9 @@ const (
 	defaultHTTPWriteTimeout      = 15 * time.Second
 	defaultHTTPIdleTimeout       = 60 * time.Second
 	defaultHTTPShutdownTimeout   = 5 * time.Second
-	defaultHTTPRequestTimeout    = 5 * time.Second
+
+	// Request budget
+	defaultRequestBudget = 2 * time.Second
 )
 
 type Config struct {
@@ -49,7 +51,7 @@ type Config struct {
 	HTTPWriteTimeout      time.Duration
 	HTTPIdleTimeout       time.Duration
 	HTTPShutdownTimeout   time.Duration
-	HTTPRequestTimeout    time.Duration
+	RequestBudget         time.Duration
 
 	CORSAllowedOrigins []string
 }
@@ -98,6 +100,10 @@ func Load() (Config, error) {
 	}
 
 	if err := loadHTTPServer(&cfg); err != nil {
+		return Config{}, err
+	}
+
+	if err := loadRequestBudget(&cfg); err != nil {
 		return Config{}, err
 	}
 
@@ -295,11 +301,6 @@ func loadHTTPServer(cfg *Config) error {
 			def: defaultHTTPShutdownTimeout,
 			dst: &cfg.HTTPShutdownTimeout,
 		},
-		{
-			key: "HTTP_REQUEST_TIMEOUT",
-			def: defaultHTTPRequestTimeout,
-			dst: &cfg.HTTPRequestTimeout,
-		},
 	}
 
 	for _, spec := range specs {
@@ -314,6 +315,21 @@ func loadHTTPServer(cfg *Config) error {
 
 		*spec.dst = d
 	}
+
+	return nil
+}
+
+func loadRequestBudget(cfg *Config) error {
+	budget, err := parseDurationEnv("REQUEST_BUDGET", defaultRequestBudget)
+	if err != nil {
+		return err
+	}
+	
+	if budget <= 0 {
+		return fmt.Errorf("%w: REQUEST_BUDGET=%s", ErrInvalidDuration, budget)
+	}
+	
+	cfg.RequestBudget = budget
 
 	return nil
 }
