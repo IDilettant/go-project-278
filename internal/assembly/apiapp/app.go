@@ -45,7 +45,7 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 		Links:                   svc,
 		BaseURL:                 cfg.BaseURL,
 		SentryMiddlewareTimeout: cfg.SentryMiddlewareTimeout,
-		RequestTimeout:          cfg.HTTPRequestTimeout,
+		RequestBudget:           cfg.RequestBudget,
 		CORSAllowedOrigins:      cfg.CORSAllowedOrigins,
 	})
 

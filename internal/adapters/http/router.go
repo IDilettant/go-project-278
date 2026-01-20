@@ -16,7 +16,7 @@ type RouterDeps struct {
 	BaseURL string
 
 	SentryMiddlewareTimeout time.Duration
-	RequestTimeout          time.Duration
+	RequestBudget           time.Duration
 	CORSAllowedOrigins      []string
 }
 
@@ -36,8 +36,8 @@ func NewRouter(deps RouterDeps) *gin.Engine {
 
 	r.Use(middleware.Recovery())
 
-	if deps.RequestTimeout > 0 {
-		r.Use(middleware.RequestTimeout(deps.RequestTimeout))
+	if deps.RequestBudget > 0 {
+		r.Use(middleware.RequestTimeout(deps.RequestBudget))
 	}
 
 	if len(deps.CORSAllowedOrigins) > 0 {
