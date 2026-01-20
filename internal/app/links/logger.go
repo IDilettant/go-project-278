@@ -12,6 +12,10 @@ type Logger interface {
 type NopLogger struct{}
 
 func (NopLogger) With(...any) Logger   { return NopLogger{} }
-func (NopLogger) Info(string, ...any)  {}
-func (NopLogger) Warn(string, ...any)  {}
-func (NopLogger) Error(string, ...any) {}
+func (NopLogger) Info(string, ...any)  { nopLog() }
+func (NopLogger) Warn(string, ...any)  { nopLog() }
+func (NopLogger) Error(string, ...any) { nopLog() }
+
+func nopLog() {
+	// Intentionally no-op: NopLogger discards log output.
+}

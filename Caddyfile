@@ -1,23 +1,23 @@
+{
+    admin off
+}
+
 :{$PORT}
 
 root * /app/public
 
-handle /assets/* {
-    file_server
+route {
+    # Статика
+    handle /assets/* {
+        file_server
+    }
+
+    # Корень (UI)
+    handle / {
+        file_server
+    }
+
+    # Всё остальное — в Go
+    reverse_proxy localhost:8080
 }
 
-handle /api/* {
-  reverse_proxy localhost{$HTTP_ADDR}
-}
-
-handle /ping {
-  reverse_proxy localhost{$HTTP_ADDR}
-}
-
-handle /r/* {
-  reverse_proxy localhost{$HTTP_ADDR}
-}
-
-handle {
-    file_server
-}
