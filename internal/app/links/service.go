@@ -112,12 +112,10 @@ func (s *Service) Redirect(ctx context.Context, shortName string, meta VisitMeta
 		}
 
 		if _, err := s.visitsRepo.Create(ctx, visit); err != nil {
-			s.log.Warn(
-				"link visit create failed",
+			s.log.With(
 				"code", shortName,
 				"link_id", link.ID,
-				"err", err,
-			)
+			).Warn("link visit create failed", "err", err)
 		}
 	}
 
