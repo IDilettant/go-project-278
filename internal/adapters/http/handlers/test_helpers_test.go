@@ -19,6 +19,7 @@ import (
 
 const (
 	apiLinksPath      = "/api/links"
+	apiLinkVisitsPath = "/api/link_visits"
 	redirectPathPrefx = "/r/"
 )
 
@@ -37,6 +38,33 @@ func doRequest(t *testing.T, method, path string, body any) *httptest.ResponseRe
 	req := httptest.NewRequest(method, path, buf)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	return rec
+}
+
+func doRequestWithHeaders(t *testing.T, method, path string, body any, headers map[string]string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	var buf *bytes.Buffer
+	if body != nil {
+		b, err := json.Marshal(body)
+		require.NoError(t, err)
+		buf = bytes.NewBuffer(b)
+	} else {
+		buf = bytes.NewBuffer(nil)
+	}
+
+	req := httptest.NewRequest(method, path, buf)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	for key, value := range headers {
+		req.Header.Set(key, value)
 	}
 
 	rec := httptest.NewRecorder()
