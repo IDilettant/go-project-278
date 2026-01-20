@@ -1,20 +1,26 @@
 package handlers
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+
+	"code/internal/app/links"
 )
 
 func (h *Handler) Redirect(c *gin.Context) {
-	shortName := c.Param("short_name")
+	code := c.Param("code")
 
-	link, err := h.svc.GetByShortName(c.Request.Context(), shortName)
+	meta := links.VisitMeta{
+		IP:        c.ClientIP(),
+		UserAgent: c.GetHeader("User-Agent"),
+		Referer:   c.GetHeader("Referer"),
+	}
+
+	url, status, err := h.svc.Redirect(c.Request.Context(), code, meta)
 	if err != nil {
 		h.fail(c, err)
 
 		return
 	}
 
-	c.Redirect(http.StatusFound, link.OriginalURL) // 302
+	c.Redirect(status, url)
 }
