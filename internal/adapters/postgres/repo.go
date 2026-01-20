@@ -8,9 +8,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"code/internal/adapters/postgres/sqlcgen"
 	"code/internal/app/links"
 	"code/internal/domain"
-	"code/internal/adapters/postgres/sqlcgen"
 )
 
 // PostgreSQL SQLSTATE error codes.

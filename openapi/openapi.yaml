@@ -22,8 +22,8 @@ paths:
               schema:
                 type: string
                 example: pong
-        "408":
-          $ref: "#/components/responses/RequestTimeout"
+        "499":
+          $ref: "#/components/responses/RequestCanceled"
         "504":
           $ref: "#/components/responses/GatewayTimeout"
         "500":
@@ -61,8 +61,8 @@ paths:
                   $ref: "#/components/schemas/LinkResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
-        "408":
-          $ref: "#/components/responses/RequestTimeout"
+        "499":
+          $ref: "#/components/responses/RequestCanceled"
         "504":
           $ref: "#/components/responses/GatewayTimeout"
         "500":
@@ -95,8 +95,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
-        "408":
-          $ref: "#/components/responses/RequestTimeout"
+        "499":
+          $ref: "#/components/responses/RequestCanceled"
         "504":
           $ref: "#/components/responses/GatewayTimeout"
         "500":
@@ -125,8 +125,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
-        "408":
-          $ref: "#/components/responses/RequestTimeout"
+        "499":
+          $ref: "#/components/responses/RequestCanceled"
         "504":
           $ref: "#/components/responses/GatewayTimeout"
         "500":
@@ -166,8 +166,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
-        "408":
-          $ref: "#/components/responses/RequestTimeout"
+        "499":
+          $ref: "#/components/responses/RequestCanceled"
         "504":
           $ref: "#/components/responses/GatewayTimeout"
         "500":
@@ -191,8 +191,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
-        "408":
-          $ref: "#/components/responses/RequestTimeout"
+        "499":
+          $ref: "#/components/responses/RequestCanceled"
         "504":
           $ref: "#/components/responses/GatewayTimeout"
         "500":
@@ -224,8 +224,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
-        "408":
-          $ref: "#/components/responses/RequestTimeout"
+        "499":
+          $ref: "#/components/responses/RequestCanceled"
         "504":
           $ref: "#/components/responses/GatewayTimeout"
         "500":
@@ -334,16 +334,16 @@ components:
             status: 500
             detail: internal error
 
-    RequestTimeout:
-      description: Request Timeout
+    RequestCanceled:
+      description: Request Canceled
       content:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
           example:
             type: client_cancelled
-            title: Request Timeout
-            status: 408
+            title: Request Canceled
+            status: 499
             detail: request canceled
 
     GatewayTimeout:
