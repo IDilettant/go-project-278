@@ -16,3 +16,10 @@ type Repo interface {
 	Update(ctx context.Context, id int64, originalURL, shortName string) (domain.Link, error)
 	Delete(ctx context.Context, id int64) error
 }
+
+type VisitsRepo interface {
+	Create(ctx context.Context, visit domain.LinkVisit) (int64, error)
+	ListAll(ctx context.Context) ([]domain.LinkVisit, error)
+	ListPage(ctx context.Context, offset, limit int32) ([]domain.LinkVisit, error)
+	Count(ctx context.Context) (int64, error)
+}
