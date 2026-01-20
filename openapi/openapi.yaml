@@ -102,6 +102,53 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/link_visits:
+    get:
+      summary: List link visits
+      description: |
+        Returns all visits when range is not provided.
+        When range is provided, returns a page and includes Content-Range.
+        Range can be sent either as a `range` query parameter or the `Range` header.
+      tags: [link_visits]
+      parameters:
+        - name: range
+          in: query
+          description: Range of items, format [start,count].
+          required: false
+          schema:
+            type: string
+            example: "[0,10]"
+        - name: Range
+          in: header
+          description: Range of items, format [start,count].
+          required: false
+          schema:
+            type: string
+            example: "[0,10]"
+      responses:
+        "200":
+          description: OK
+          headers:
+            Content-Range:
+              description: Range metadata when range is provided.
+              schema:
+                type: string
+                example: "link_visits 0-9/42"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LinkVisitResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "499":
+          $ref: "#/components/responses/RequestCanceled"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /api/links/{id}:
     get:
       summary: Get link by ID
@@ -198,13 +245,13 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /r/{short_name}:
+  /r/{code}:
     get:
       summary: Redirect by short name
       description: Redirects to the original URL by short name.
       tags: [redirect]
       parameters:
-        - name: short_name
+        - name: code
           in: path
           required: true
           description: Short name
@@ -271,6 +318,33 @@ components:
           type: string
           example: https://example.com/r/abc123
       required: [id, original_url, short_name, short_url]
+
+    LinkVisitResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        link_id:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-10-31T13:01:43Z"
+        ip:
+          type: string
+          example: 172.18.0.1
+        user_agent:
+          type: string
+          example: curl/8.5.0
+        referer:
+          type: string
+          example: https://example.com
+        status:
+          type: integer
+          example: 302
+      required: [id, link_id, created_at, ip, user_agent, status]
 
     Problem:
       type: object
