@@ -1,53 +1,40 @@
 package httpapi
 
 import (
-	"time"
-
-	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
 
 	"code/internal/adapters/http/handlers"
-	"code/internal/adapters/http/middleware"
 	"code/internal/app/links"
 )
-
-type RouterDeps struct {
-	Links   links.UseCase
-	BaseURL string
-
-	SentryMiddlewareTimeout time.Duration
-	RequestBudget           time.Duration
-	CORSAllowedOrigins      []string
-}
 
 const (
 	linkByIDPath = "/links/:id"
 	linksPath    = "/links"
 )
 
-func NewRouter(deps RouterDeps) *gin.Engine {
+type RouterDeps struct {
+	Links   links.UseCase
+	BaseURL string
+}
+
+type EnginePlugin func(*gin.Engine)
+
+// NewEngine creates a bare gin.Engine and applies plugins in order.
+func NewEngine(plugins ...EnginePlugin) *gin.Engine {
 	r := gin.New()
-	r.Use(gin.Logger())
-
-	r.Use(sentrygin.New(sentrygin.Options{
-		Repanic: true,
-		Timeout: deps.SentryMiddlewareTimeout,
-	}))
-
-	r.Use(middleware.Recovery())
-
-	if deps.RequestBudget > 0 {
-		r.Use(middleware.RequestTimeout(deps.RequestBudget))
+	
+	for _, p := range plugins {
+		p(r)
 	}
+	
+	return r
+}
 
-	if len(deps.CORSAllowedOrigins) > 0 {
-		r.Use(middleware.CORS(deps.CORSAllowedOrigins))
-	}
-
+// RegisterRoutes attaches routes/handlers to an existing engine.
+func RegisterRoutes(r *gin.Engine, deps RouterDeps) {
 	h := handlers.New(deps.Links, deps.BaseURL)
 
 	r.NoRoute(h.NotFound)
-
 	r.GET("/ping", h.Ping)
 
 	api := r.Group("/api")
@@ -60,6 +47,4 @@ func NewRouter(deps RouterDeps) *gin.Engine {
 	}
 
 	r.GET("/r/:short_name", h.Redirect)
-
-	return r
 }
