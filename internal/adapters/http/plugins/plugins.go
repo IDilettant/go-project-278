@@ -38,6 +38,12 @@ func RequestTimeout(d time.Duration) func(*gin.Engine) {
 	}
 }
 
+func RequestID() func(*gin.Engine) {
+	return func(r *gin.Engine) {
+		r.Use(middleware.RequestID())
+	}
+}
+
 func CORS(origins []string) func(*gin.Engine) {
 	return func(r *gin.Engine) {
 		if len(origins) > 0 {
