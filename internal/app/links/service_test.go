@@ -2,6 +2,7 @@ package links
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,6 +21,55 @@ type stubRepo struct {
 	createFunc         func(context.Context, string, string) (domain.Link, error)
 	updateFunc         func(context.Context, int64, string, string) (domain.Link, error)
 	deleteFunc         func(context.Context, int64) error
+}
+
+type stubVisitsRepo struct {
+	t testing.TB
+
+	createFunc   func(context.Context, domain.LinkVisit) (int64, error)
+	listAllFunc  func(context.Context) ([]domain.LinkVisit, error)
+	listPageFunc func(context.Context, int32, int32) ([]domain.LinkVisit, error)
+	countFunc    func(context.Context) (int64, error)
+}
+
+func (s *stubVisitsRepo) Create(ctx context.Context, visit domain.LinkVisit) (int64, error) {
+	s.t.Helper()
+
+	if s.createFunc == nil {
+		s.t.Fatalf("unexpected Create call")
+	}
+
+	return s.createFunc(ctx, visit)
+}
+
+func (s *stubVisitsRepo) ListAll(ctx context.Context) ([]domain.LinkVisit, error) {
+	s.t.Helper()
+
+	if s.listAllFunc == nil {
+		s.t.Fatalf("unexpected ListAll call")
+	}
+
+	return s.listAllFunc(ctx)
+}
+
+func (s *stubVisitsRepo) ListPage(ctx context.Context, offset, limit int32) ([]domain.LinkVisit, error) {
+	s.t.Helper()
+
+	if s.listPageFunc == nil {
+		s.t.Fatalf("unexpected ListPage call")
+	}
+
+	return s.listPageFunc(ctx, offset, limit)
+}
+
+func (s *stubVisitsRepo) Count(ctx context.Context) (int64, error) {
+	s.t.Helper()
+
+	if s.countFunc == nil {
+		s.t.Fatalf("unexpected Count call")
+	}
+
+	return s.countFunc(ctx)
 }
 
 func (s *stubRepo) ListAll(ctx context.Context) ([]domain.Link, error) {
@@ -258,4 +308,37 @@ func TestServiceUpdate_InvalidOriginalURL(t *testing.T) {
 	svc := New(repo, nil, nil)
 	_, err := svc.Update(ctx, 1, "not-a-url", "abcd")
 	require.ErrorIs(t, err, domain.ErrInvalidURL)
+}
+
+func TestServiceRedirect_VisitCreateFailureDoesNotFail(t *testing.T) {
+	ctx := context.Background()
+	link := domain.Link{
+		ID:          1,
+		OriginalURL: "https://example.com",
+		ShortName:   "code",
+	}
+	var createCalls int
+
+	repo := &stubRepo{
+		t: t,
+		getByShortNameFunc: func(ctx context.Context, shortName string) (domain.Link, error) {
+			require.Equal(t, "code", shortName)
+			return link, nil
+		},
+	}
+
+	visitsRepo := &stubVisitsRepo{
+		t: t,
+		createFunc: func(ctx context.Context, visit domain.LinkVisit) (int64, error) {
+			createCalls++
+			return 0, errors.New("write failed")
+		},
+	}
+
+	svc := New(repo, visitsRepo, nil)
+	url, status, err := svc.Redirect(ctx, "code", VisitMeta{})
+	require.NoError(t, err)
+	require.Equal(t, link.OriginalURL, url)
+	require.Equal(t, redirectStatusFound, status)
+	require.Equal(t, 1, createCalls)
 }
