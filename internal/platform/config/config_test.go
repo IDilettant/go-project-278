@@ -19,7 +19,7 @@ func TestLoad_MissingRequired(t *testing.T) {
 }
 
 func TestLoad_DefaultsOk(t *testing.T) {
-	t.Setenv("PORT", "8080")
+	t.Setenv("HTTP_ADDR", "8080")
 	t.Setenv("BASE_URL", "http://localhost:8080")
 	t.Setenv("DATABASE_URL", "postgres://x:y@localhost:5432/db?sslmode=disable")
 	t.Setenv("SENTRY_DSN", "https://public@o0.ingest.sentry.io/0")
@@ -29,7 +29,7 @@ func TestLoad_DefaultsOk(t *testing.T) {
 }
 
 func TestLoad_InvalidDuration(t *testing.T) {
-	t.Setenv("PORT", "8080")
+	t.Setenv("HTTP_ADDR", "8080")
 	t.Setenv("BASE_URL", "http://localhost:8080")
 	t.Setenv("DATABASE_URL", "postgres://x:y@localhost:5432/db?sslmode=disable")
 	t.Setenv("SENTRY_DSN", "https://public@o0.ingest.sentry.io/0")
@@ -41,7 +41,7 @@ func TestLoad_InvalidDuration(t *testing.T) {
 }
 
 func TestLoad_RequestBudgetInvalid(t *testing.T) {
-	t.Setenv("PORT", "8080")
+	t.Setenv("HTTP_ADDR", "8080")
 	t.Setenv("BASE_URL", "http://localhost:8080")
 	t.Setenv("DATABASE_URL", "postgres://x:y@localhost:5432/db?sslmode=disable")
 	t.Setenv("SENTRY_DSN", "https://public@o0.ingest.sentry.io/0")

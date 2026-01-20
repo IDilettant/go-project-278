@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	defaultPort = "8080"
+	// PORT is reserved for platform/Caddy. HTTP_ADDR controls the Go backend.
+	defaultHTTPAddr = ":8080"
 
 	// Sentry
 	defaultSentryFlushTimeout      = 2 * time.Second
@@ -33,8 +34,9 @@ const (
 )
 
 type Config struct {
-	Port    string
-	BaseURL string
+	// HTTPAddr is the Go backend listen address; PORT is reserved for platform/Caddy.
+	HTTPAddr string
+	BaseURL  string
 
 	DatabaseURL string
 	SentryDSN   string
@@ -64,7 +66,7 @@ type durationSpec struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		Port: normalizeListenAddr(getEnv("PORT", defaultPort)),
+		HTTPAddr: normalizeListenAddr(getEnv("HTTP_ADDR", defaultHTTPAddr)),
 	}
 
 	baseURL, err := mustEnv("BASE_URL", ErrBaseURLEmpty)
@@ -115,7 +117,7 @@ func Load() (Config, error) {
 func normalizeListenAddr(v string) string {
 	v = strings.TrimSpace(v)
 	if v == "" {
-		return ":" + defaultPort
+		return defaultHTTPAddr
 	}
 
 	if strings.Contains(v, ":") {
@@ -324,11 +326,11 @@ func loadRequestBudget(cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if budget <= 0 {
 		return fmt.Errorf("%w: REQUEST_BUDGET=%s", ErrInvalidDuration, budget)
 	}
-	
+
 	cfg.RequestBudget = budget
 
 	return nil

@@ -3,8 +3,6 @@ package config
 import "errors"
 
 var (
-	ErrPortEmpty = errors.New("PORT is empty")
-
 	ErrBaseURLEmpty   = errors.New("BASE_URL is empty")
 	ErrInvalidBaseURL = errors.New("BASE_URL is invalid")
 
