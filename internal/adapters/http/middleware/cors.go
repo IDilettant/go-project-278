@@ -9,7 +9,7 @@ import (
 
 const (
 	allowedMethods = "GET,POST,PUT,DELETE,OPTIONS"
-	allowedHeaders = "Content-Type, Authorization"
+	allowedHeaders = "Content-Type, Authorization, Range"
 	exposeHeaders  = "Content-Range, Location"
 )
 
