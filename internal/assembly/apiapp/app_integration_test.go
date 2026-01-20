@@ -58,7 +58,7 @@ func TestApp_New_Run_Close(t *testing.T) {
 	require.NoError(t, goose.Up(db, migrationsDir))
 
 	// required envs for config.Load()
-	t.Setenv("PORT", "8080")
+	t.Setenv("HTTP_ADDR", "8080")
 	t.Setenv("BASE_URL", "http://localhost:8080")
 	t.Setenv("SENTRY_DSN", "https://public@o0.ingest.sentry.io/0")
 	t.Setenv("DATABASE_URL", dsn)
@@ -137,7 +137,7 @@ func TestApp_GracefulShutdown_Run_StopsOnCancel(t *testing.T) {
 	require.NoError(t, goose.Up(db, migrationsDir))
 
 	// required envs for config.Load()
-	t.Setenv("PORT", "18080")
+	t.Setenv("HTTP_ADDR", "18080")
 	t.Setenv("BASE_URL", "http://localhost:18080")
 	t.Setenv("SENTRY_DSN", "https://public@o0.ingest.sentry.io/0")
 	t.Setenv("DATABASE_URL", dsn)
