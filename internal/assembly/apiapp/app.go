@@ -6,17 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/getsentry/sentry-go"
 
 	httpapi "code/internal/adapters/http"
+	"code/internal/adapters/http/plugins"
 	pgrepo "code/internal/adapters/postgres"
 	"code/internal/app/links"
 	"code/internal/platform/config"
 	"code/internal/platform/postgres"
 )
 
-// App is a composition root for the HTTP API.
 type App struct {
 	cfg    config.Config
 	db     *sql.DB
@@ -41,15 +42,20 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 	repo := pgrepo.NewRepo(db)
 	svc := links.New(repo)
 
-	router := httpapi.NewRouter(httpapi.RouterDeps{
-		Links:                   svc,
-		BaseURL:                 cfg.BaseURL,
-		SentryMiddlewareTimeout: cfg.SentryMiddlewareTimeout,
-		RequestBudget:           cfg.RequestBudget,
-		CORSAllowedOrigins:      cfg.CORSAllowedOrigins,
+	r := httpapi.NewEngine(
+		plugins.Logger(),
+		plugins.Sentry(cfg.SentryMiddlewareTimeout),
+		plugins.Recovery(),
+		plugins.RequestTimeout(cfg.RequestBudget),
+		plugins.CORS(cfg.CORSAllowedOrigins),
+	)
+
+	httpapi.RegisterRoutes(r, httpapi.RouterDeps{
+		Links:   svc,
+		BaseURL: cfg.BaseURL,
 	})
 
-	return &App{cfg: cfg, db: db, router: router}, nil
+	return &App{cfg: cfg, db: db, router: r}, nil
 }
 
 func (a *App) Close() error {
@@ -86,29 +92,33 @@ func (a *App) Run(ctx context.Context) error {
 		return fmt.Errorf("http server: %w", err)
 
 	case <-ctx.Done():
-		srv.SetKeepAlivesEnabled(false)
+		return gracefulShutdown(ctx, srv, a.cfg.HTTPShutdownTimeout, errCh)
+	}
+}
 
-		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), a.cfg.HTTPShutdownTimeout)
-		defer cancel()
+func gracefulShutdown(ctx context.Context, srv *http.Server, timeout time.Duration, errCh <-chan error) error {
+	srv.SetKeepAlivesEnabled(false)
 
-		if err := srv.Shutdown(shutdownCtx); err != nil {
-			_ = srv.Close()
-			if errors.Is(err, context.DeadlineExceeded) {
-				return fmt.Errorf("http shutdown timed out; forced close: %w", err)
-			}
+	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
+	defer cancel()
 
-			return fmt.Errorf("http shutdown failed; forced close: %w", err)
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		_ = srv.Close()
+		if errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("http shutdown timed out; forced close: %w", err)
 		}
 
-		select {
-		case err := <-errCh:
-			if errors.Is(err, http.ErrServerClosed) {
-				return nil
-			}
+		return fmt.Errorf("http shutdown failed; forced close: %w", err)
+	}
 
-			return fmt.Errorf("http server stopped with error: %w", err)
-		default:
+	select {
+	case err := <-errCh:
+		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
+
+		return fmt.Errorf("http server stopped with error: %w", err)
+	default:
+		return nil
 	}
 }
