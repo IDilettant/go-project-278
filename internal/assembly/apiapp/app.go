@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -26,7 +25,7 @@ type App struct {
 	router http.Handler
 }
 
-func New(ctx context.Context, cfg config.Config) (*App, error) {
+func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*App, error) {
 	if err := sentry.Init(sentry.ClientOptions{Dsn: cfg.SentryDSN}); err != nil {
 		return nil, fmt.Errorf("init sentry: %w", err)
 	}
@@ -43,11 +42,13 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 
 	repo := pgrepo.NewRepo(db)
 	visitsRepo := pgrepo.NewLinkVisitsRepo(db)
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	svc := links.New(repo, visitsRepo, linksSlogLogger{l: logger})
+
+	appLogger := linksSlogLogger{l: logger}
+	svc := links.New(repo, visitsRepo, appLogger)
 
 	r := httpapi.NewEngine(
 		plugins.Logger(),
+		plugins.RequestID(),
 		plugins.Sentry(cfg.SentryMiddlewareTimeout),
 		plugins.Recovery(),
 		plugins.RequestTimeout(cfg.RequestBudget),

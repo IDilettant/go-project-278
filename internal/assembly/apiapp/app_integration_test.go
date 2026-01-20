@@ -4,6 +4,8 @@ package apiapp_test
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -66,7 +68,8 @@ func TestApp_New_Run_Close(t *testing.T) {
 	cfg, err := config.Load()
 	require.NoError(t, err)
 
-	app, err := apiapp.New(ctx, cfg)
+	logger := slog.New(slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	app, err := apiapp.New(ctx, cfg, logger)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = app.Close() })
 
@@ -145,7 +148,8 @@ func TestApp_GracefulShutdown_Run_StopsOnCancel(t *testing.T) {
 	cfg, err := config.Load()
 	require.NoError(t, err)
 
-	app, err := apiapp.New(ctx, cfg)
+	logger := slog.New(slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	app, err := apiapp.New(ctx, cfg, logger)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = app.Close() })
 

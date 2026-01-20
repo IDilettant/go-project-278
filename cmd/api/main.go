@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -29,7 +30,9 @@ func run() error {
 		return err
 	}
 
-	app, err := apiapp.New(ctx, cfg)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	app, err := apiapp.New(ctx, cfg, logger)
 	if err != nil {
 		return err
 	}
