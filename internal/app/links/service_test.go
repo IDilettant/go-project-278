@@ -124,7 +124,7 @@ func TestServiceCreate_AutoShortNameRetries(t *testing.T) {
 		},
 	}
 
-	svc := New(repo)
+	svc := New(repo, nil)
 	link, err := svc.Create(ctx, "https://example.com", "")
 	require.NoError(t, err)
 	require.Equal(t, 3, calls)
@@ -144,7 +144,7 @@ func TestServiceCreate_AutoShortNameExhausted(t *testing.T) {
 		},
 	}
 
-	svc := New(repo)
+	svc := New(repo, nil)
 	_, err := svc.Create(ctx, "https://example.com", "")
 	require.ErrorIs(t, err, domain.ErrShortNameConflict)
 	require.Equal(t, autoShortNameAttempts, calls)
@@ -158,7 +158,7 @@ func TestServiceCreate_ExplicitShortNameValidation(t *testing.T) {
 			t: t,
 		}
 
-		svc := New(repo)
+		svc := New(repo, nil)
 		_, err := svc.Create(ctx, "https://example.com", "ab_cd")
 		require.ErrorIs(t, err, domain.ErrInvalidShortName)
 	})
@@ -173,7 +173,7 @@ func TestServiceCreate_ExplicitShortNameValidation(t *testing.T) {
 			},
 		}
 
-		svc := New(repo)
+		svc := New(repo, nil)
 		_, err := svc.Create(ctx, "https://example.com", "abcd")
 		require.ErrorIs(t, err, domain.ErrShortNameConflict)
 		require.Equal(t, 1, calls)
@@ -191,7 +191,7 @@ func TestServiceUpdate_EmptyShortNameInvalid(t *testing.T) {
 		},
 	}
 
-	svc := New(repo)
+	svc := New(repo, nil)
 	_, err := svc.Update(ctx, 1, "https://example.com/new", "")
 	require.ErrorIs(t, err, domain.ErrInvalidShortName)
 }
@@ -207,7 +207,7 @@ func TestServiceUpdate_ExplicitShortName(t *testing.T) {
 		},
 	}
 
-	svc := New(repo)
+	svc := New(repo, nil)
 	link, err := svc.Update(ctx, 1, "https://example.com/new", "zzzz")
 	require.NoError(t, err)
 	require.Equal(t, "zzzz", link.ShortName)
@@ -224,7 +224,7 @@ func TestServiceUpdate_InvalidShortName(t *testing.T) {
 		},
 	}
 
-	svc := New(repo)
+	svc := New(repo, nil)
 	_, err := svc.Update(ctx, 1, "https://example.com/new", "ab_cd")
 	require.ErrorIs(t, err, domain.ErrInvalidShortName)
 }
@@ -239,7 +239,7 @@ func TestServiceUpdate_NotFound(t *testing.T) {
 		},
 	}
 
-	svc := New(repo)
+	svc := New(repo, nil)
 	_, err := svc.Update(ctx, 1, "https://example.com/new", "abcd")
 	require.ErrorIs(t, err, domain.ErrNotFound)
 }
@@ -255,7 +255,7 @@ func TestServiceUpdate_InvalidOriginalURL(t *testing.T) {
 		},
 	}
 
-	svc := New(repo)
+	svc := New(repo, nil)
 	_, err := svc.Update(ctx, 1, "not-a-url", "abcd")
 	require.ErrorIs(t, err, domain.ErrInvalidURL)
 }

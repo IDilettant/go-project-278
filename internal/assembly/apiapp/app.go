@@ -40,7 +40,8 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 	}
 
 	repo := pgrepo.NewRepo(db)
-	svc := links.New(repo)
+	visitsRepo := pgrepo.NewLinkVisitsRepo(db)
+	svc := links.New(repo, visitsRepo)
 
 	r := httpapi.NewEngine(
 		plugins.Logger(),
@@ -70,7 +71,7 @@ func (a *App) Close() error {
 
 func (a *App) Run(ctx context.Context) error {
 	srv := &http.Server{
-		Addr:              a.cfg.Port,
+		Addr:              a.cfg.HTTPAddr,
 		Handler:           a.router,
 		ReadHeaderTimeout: a.cfg.HTTPReadHeaderTimeout,
 		ReadTimeout:       a.cfg.HTTPReadTimeout,

@@ -98,7 +98,7 @@ func run(m *testing.M) int {
 	}
 
 	// config.Load required envs
-	os.Setenv("PORT", "8080")
+	os.Setenv("HTTP_ADDR", "8080")
 	os.Setenv("BASE_URL", "http://localhost:8080")
 	os.Setenv("SENTRY_DSN", "https://public@o0.ingest.sentry.io/0")
 	os.Setenv("DATABASE_URL", dsn)
@@ -111,7 +111,8 @@ func run(m *testing.M) int {
 	}
 
 	repo := pgrepo.NewRepo(db)
-	svc := links.New(repo)
+	visitsRepo := pgrepo.NewLinkVisitsRepo(db)
+	svc := links.New(repo, visitsRepo)
 
 	router = httpapi.NewEngine(
 		plugins.Logger(),
@@ -305,6 +306,85 @@ func TestAPI_Redirect_ByShortName_StatusAndLocation(t *testing.T) {
 	require.Equal(t, "https://example.com/redirect", rec.Header().Get("Location"))
 }
 
+func TestAPI_Redirect_WritesVisit(t *testing.T) {
+	resetLinks(t)
+
+	id := createLink(t, "https://example.com/long-url", "track")
+
+	req := httptest.NewRequest(http.MethodGet, "/r/track", nil)
+	req.Header.Set("User-Agent", "curl/8.5.0")
+	req.Header.Set("Referer", "https://example.com")
+	req.Header.Set("CF-Connecting-IP", "1.2.3.4")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusFound, rec.Code)
+	require.Equal(t, "https://example.com/long-url", rec.Header().Get("Location"))
+
+	var (
+		linkID    int64
+		ip        string
+		userAgent string
+		referer   string
+		status    int
+		createdAt time.Time
+	)
+	err := db.QueryRowContext(
+		tcCtx,
+		`SELECT link_id, ip, user_agent, referer, status, created_at
+		FROM link_visits
+		ORDER BY id DESC
+		LIMIT 1`,
+	).Scan(&linkID, &ip, &userAgent, &referer, &status, &createdAt)
+	require.NoError(t, err)
+	require.Equal(t, id, linkID)
+	require.Equal(t, "1.2.3.4", ip)
+	require.Equal(t, "curl/8.5.0", userAgent)
+	require.Equal(t, "https://example.com", referer)
+	require.Equal(t, http.StatusFound, status)
+	require.False(t, createdAt.IsZero())
+}
+
+func TestAPI_ListLinkVisits_Range(t *testing.T) {
+	resetLinks(t)
+
+	id := createLink(t, "https://example.com/long-url", "visitlist")
+
+	for range 3 {
+		req := httptest.NewRequest(http.MethodGet, "/r/visitlist", nil)
+		req.Header.Set("User-Agent", "curl/8.5.0")
+		req.Header.Set("CF-Connecting-IP", "1.2.3.4")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusFound, rec.Code)
+	}
+
+	rec := doRequestWithHeaders(t, http.MethodGet, apiLinkVisitsPath, nil, map[string]string{
+		"Range": "[0,2]",
+	})
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "link_visits 0-1/3", rec.Header().Get("Content-Range"))
+
+	type visitResp struct {
+		ID        int64     `json:"id"`
+		LinkID    int64     `json:"link_id"`
+		CreatedAt time.Time `json:"created_at"`
+		IP        string    `json:"ip"`
+		UserAgent string    `json:"user_agent"`
+		Referer   string    `json:"referer"`
+		Status    int       `json:"status"`
+	}
+
+	var visits []visitResp
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &visits))
+	require.Len(t, visits, 2)
+	require.Equal(t, id, visits[0].LinkID)
+	require.Equal(t, "1.2.3.4", visits[0].IP)
+	require.Equal(t, "curl/8.5.0", visits[0].UserAgent)
+	require.Equal(t, http.StatusFound, visits[0].Status)
+	require.False(t, visits[0].CreatedAt.IsZero())
+}
+
 func TestAPI_Conflict_Create(t *testing.T) {
 	resetLinks(t)
 
@@ -489,7 +569,7 @@ func seedLinks(t *testing.T, count int) {
 func truncateLinks(t *testing.T) {
 	t.Helper()
 
-	_, err := db.ExecContext(tcCtx, `TRUNCATE links RESTART IDENTITY`)
+	_, err := db.ExecContext(tcCtx, `TRUNCATE link_visits, links RESTART IDENTITY`)
 	require.NoError(t, err)
 }
 

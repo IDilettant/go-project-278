@@ -18,7 +18,7 @@ import (
 )
 
 func TestAPI_PanicRecovery_ReturnsProblemJSON(t *testing.T) {
-	svc := links.New(timeoutRepo{})
+	svc := links.New(timeoutRepo{}, nil)
 	router := httpapi.NewEngine(
 		plugins.Recovery(),
 		plugins.RequestTimeout(50*time.Millisecond),

@@ -56,7 +56,7 @@ func (timeoutRepo) Delete(_ context.Context, _ int64) error {
 }
 
 func TestAPI_RequestTimeout(t *testing.T) {
-	svc := links.New(timeoutRepo{})
+	svc := links.New(timeoutRepo{}, nil)
 	router := httpapi.NewEngine(
 		plugins.Recovery(),
 		plugins.RequestTimeout(50*time.Millisecond),

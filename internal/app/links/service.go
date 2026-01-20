@@ -5,7 +5,9 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
+	"time"
 
 	"code/internal/domain"
 )
@@ -17,14 +19,19 @@ const (
 	createErrWrapFmt = "links create: %w"
 
 	shortNameAlphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	redirectStatusFound = 302
 )
 
+var errVisitsRepoNil = errors.New("link visits repo is nil")
+
 type Service struct {
-	repo Repo
+	repo       Repo
+	visitsRepo VisitsRepo
 }
 
-func New(repo Repo) *Service {
-	return &Service{repo: repo}
+func New(repo Repo, visitsRepo VisitsRepo) *Service {
+	return &Service{repo: repo, visitsRepo: visitsRepo}
 }
 
 var _ UseCase = (*Service)(nil)
@@ -82,6 +89,32 @@ func (s *Service) GetByShortName(ctx context.Context, shortName string) (domain.
 	return link, nil
 }
 
+func (s *Service) Redirect(ctx context.Context, shortName string, meta VisitMeta) (string, int, error) {
+	link, err := s.GetByShortName(ctx, shortName)
+	if err != nil {
+		return "", 0, err
+	}
+
+	status := redirectStatusFound
+
+	if s.visitsRepo != nil {
+		visit := domain.LinkVisit{
+			LinkID:    link.ID,
+			CreatedAt: time.Now().UTC(),
+			IP:        meta.IP,
+			UserAgent: meta.UserAgent,
+			Referer:   meta.Referer,
+			Status:    status,
+		}
+
+		if _, err := s.visitsRepo.Create(ctx, visit); err != nil {
+			log.Printf("link visit create: %v", err)
+		}
+	}
+
+	return link.OriginalURL, status, nil
+}
+
 func (s *Service) Create(ctx context.Context, originalURL, shortName string) (domain.Link, error) {
 	originalURL = strings.TrimSpace(originalURL)
 	shortName = strings.TrimSpace(shortName)
@@ -132,6 +165,37 @@ func (s *Service) Delete(ctx context.Context, id int64) error {
 	}
 
 	return nil
+}
+
+func (s *Service) ListVisitsAll(ctx context.Context) ([]domain.LinkVisit, error) {
+	if s.visitsRepo == nil {
+		return nil, errVisitsRepoNil
+	}
+
+	items, err := s.visitsRepo.ListAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("link visits list all: %w", err)
+	}
+
+	return items, nil
+}
+
+func (s *Service) ListVisits(ctx context.Context, rng Range) ([]domain.LinkVisit, int64, error) {
+	if s.visitsRepo == nil {
+		return nil, 0, errVisitsRepoNil
+	}
+
+	items, err := s.visitsRepo.ListPage(ctx, int32(rng.Start), int32(rng.Count))
+	if err != nil {
+		return nil, 0, fmt.Errorf("link visits list page: %w", err)
+	}
+
+	total, err := s.visitsRepo.Count(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("link visits count: %w", err)
+	}
+
+	return items, total, nil
 }
 
 func (s *Service) createWithGeneratedShortName(
