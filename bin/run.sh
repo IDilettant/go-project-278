@@ -2,6 +2,8 @@
 set -eu
 
 echo "[run.sh] Starting service"
+export PORT="${PORT:-80}"
+echo "[run.sh] PORT=${PORT:-} HTTP_ADDR=${HTTP_ADDR:-:8080}"
 
 echo "[run.sh] Running DB migrations"
 goose -dir ./db/migrations postgres "${DATABASE_URL}" up
