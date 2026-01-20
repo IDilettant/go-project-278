@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 
 	"code/internal/adapters/http/problems"
@@ -39,18 +40,18 @@ func problemFromError(err error) problems.Problem {
 			Status: http.StatusConflict,
 			Detail: problems.DetailShortNameConflict,
 		}
-	case errors.Is(err, context.DeadlineExceeded):
+	case isTimeout(err):
 		return problems.Problem{
 			Type:   problems.ProblemTypeTimeout,
 			Title:  problems.TitleGatewayTimeout,
 			Status: http.StatusGatewayTimeout,
 			Detail: problems.DetailTimeout,
 		}
-	case errors.Is(err, context.Canceled):
+	case isCanceled(err):
 		return problems.Problem{
 			Type:   problems.ProblemTypeCanceled,
-			Title:  problems.TitleRequestTimeout,
-			Status: http.StatusRequestTimeout,
+			Title:  problems.TitleRequestCanceled,
+			Status: problems.StatusClientClosedRequest,
 			Detail: problems.DetailRequestCanceled,
 		}
 	default:
@@ -61,4 +62,30 @@ func problemFromError(err error) problems.Problem {
 			Detail: problems.DetailInternalError,
 		}
 	}
+}
+
+func isTimeout(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+
+	if errors.Is(err, http.ErrHandlerTimeout) {
+		return true
+	}
+
+	var netErr net.Error
+	
+	return errors.As(err, &netErr) && netErr.Timeout()
+}
+
+func isCanceled(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	return errors.Is(err, context.Canceled)
 }
