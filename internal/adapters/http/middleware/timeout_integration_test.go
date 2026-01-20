@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	httpapi "code/internal/adapters/http"
+	"code/internal/adapters/http/plugins"
 	"code/internal/app/links"
 	"code/internal/domain"
 	"code/internal/testutils"
@@ -56,16 +57,18 @@ func (timeoutRepo) Delete(_ context.Context, _ int64) error {
 
 func TestAPI_RequestTimeout(t *testing.T) {
 	svc := links.New(timeoutRepo{})
-	r := httpapi.NewRouter(httpapi.RouterDeps{
-		Links:                   svc,
-		BaseURL:                 "http://localhost:8080",
-		SentryMiddlewareTimeout: time.Second,
-		RequestBudget:           50 * time.Millisecond,
+	router := httpapi.NewEngine(
+		plugins.Recovery(),
+		plugins.RequestTimeout(50*time.Millisecond),
+	)
+	httpapi.RegisterRoutes(router, httpapi.RouterDeps{
+		Links:   svc,
+		BaseURL: "http://localhost:8080",
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/links", nil)
 	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, req)
+	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusGatewayTimeout, rec.Code)
 	p := testutils.RequireProblem(t, rec.Result(), http.StatusGatewayTimeout, "timeout")

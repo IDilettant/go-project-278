@@ -12,17 +12,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	httpapi "code/internal/adapters/http"
+	"code/internal/adapters/http/plugins"
 	"code/internal/app/links"
 	"code/internal/testutils"
 )
 
 func TestAPI_PanicRecovery_ReturnsProblemJSON(t *testing.T) {
 	svc := links.New(timeoutRepo{})
-	router := httpapi.NewRouter(httpapi.RouterDeps{
-		Links:                   svc,
-		BaseURL:                 "http://localhost:8080",
-		SentryMiddlewareTimeout: time.Second,
-		RequestBudget:           50 * time.Millisecond,
+	router := httpapi.NewEngine(
+		plugins.Recovery(),
+		plugins.RequestTimeout(50*time.Millisecond),
+	)
+	httpapi.RegisterRoutes(router, httpapi.RouterDeps{
+		Links:   svc,
+		BaseURL: "http://localhost:8080",
 	})
 
 	router.GET("/panic", func(c *gin.Context) {

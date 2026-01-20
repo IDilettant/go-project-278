@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	_ "github.com/jackc/pgx/v5/stdlib" // register pgx driver for database/sql
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
@@ -25,6 +26,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	httpapi "code/internal/adapters/http"
+	"code/internal/adapters/http/plugins"
 	pgrepo "code/internal/adapters/postgres"
 	"code/internal/app/links"
 	"code/internal/platform/config"
@@ -36,7 +38,7 @@ var (
 	tcCtx  = context.Background()
 	pgC    *tcpg.PostgresContainer
 	db     *sql.DB
-	router http.Handler
+	router *gin.Engine
 )
 
 var shortNameRe = regexp.MustCompile(`^[a-zA-Z0-9]{4,32}$`)
@@ -111,11 +113,17 @@ func run(m *testing.M) int {
 	repo := pgrepo.NewRepo(db)
 	svc := links.New(repo)
 
-	router = httpapi.NewRouter(httpapi.RouterDeps{
-		Links:                   svc,
-		BaseURL:                 cfg.BaseURL,
-		SentryMiddlewareTimeout: cfg.SentryMiddlewareTimeout,
-		RequestBudget:           cfg.RequestBudget,
+	router = httpapi.NewEngine(
+		plugins.Logger(),
+		plugins.Sentry(cfg.SentryMiddlewareTimeout),
+		plugins.Recovery(),
+		plugins.RequestTimeout(cfg.RequestBudget),
+		plugins.CORS(cfg.CORSAllowedOrigins),
+	)
+
+	httpapi.RegisterRoutes(router, httpapi.RouterDeps{
+		Links:   svc,
+		BaseURL: cfg.BaseURL,
 	})
 
 	return m.Run()

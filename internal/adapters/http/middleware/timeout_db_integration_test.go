@@ -16,6 +16,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	httpapi "code/internal/adapters/http"
+	"code/internal/adapters/http/plugins"
 	"code/internal/app/links"
 	"code/internal/domain"
 	"code/internal/platform/postgres"
@@ -103,11 +104,13 @@ func TestAPI_RequestTimeout_CancelsDBQuery(t *testing.T) {
 	errCh := make(chan error, 1)
 	repo := slowRepo{db: db, errCh: errCh}
 	svc := links.New(repo)
-	router := httpapi.NewRouter(httpapi.RouterDeps{
-		Links:                   svc,
-		BaseURL:                 "http://localhost:8080",
-		SentryMiddlewareTimeout: time.Second,
-		RequestBudget:           50 * time.Millisecond,
+	router := httpapi.NewEngine(
+		plugins.Recovery(),
+		plugins.RequestTimeout(50*time.Millisecond),
+	)
+	httpapi.RegisterRoutes(router, httpapi.RouterDeps{
+		Links:   svc,
+		BaseURL: "http://localhost:8080",
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/links", nil)
