@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	linkByIDPath = "/links/:id"
-	linksPath    = "/links"
+	linkByIDPath   = "/links/:id"
+	linksPath      = "/links"
+	linkVisitsPath = "/link_visits"
 )
 
 type RouterDeps struct {
@@ -22,11 +23,12 @@ type EnginePlugin func(*gin.Engine)
 // NewEngine creates a bare gin.Engine and applies plugins in order.
 func NewEngine(plugins ...EnginePlugin) *gin.Engine {
 	r := gin.New()
-	
+	r.TrustedPlatform = gin.PlatformCloudflare
+
 	for _, p := range plugins {
 		p(r)
 	}
-	
+
 	return r
 }
 
@@ -44,7 +46,8 @@ func RegisterRoutes(r *gin.Engine, deps RouterDeps) {
 		api.GET(linkByIDPath, h.GetLink)
 		api.PUT(linkByIDPath, h.UpdateLink)
 		api.DELETE(linkByIDPath, h.DeleteLink)
+		api.GET(linkVisitsPath, h.ListLinkVisits)
 	}
 
-	r.GET("/r/:short_name", h.Redirect)
+	r.GET("/r/:code", h.Redirect)
 }
