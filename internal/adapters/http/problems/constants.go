@@ -1,7 +1,8 @@
 package problems
 
 const (
-	ContentTypeProblemJSON = "application/problem+json"
+	ContentTypeProblemJSON    = "application/problem+json"
+	StatusClientClosedRequest = 499
 
 	ProblemTypeValidation  = "validation_error"
 	ProblemTypeInvalidJSON = "invalid_json"
@@ -11,13 +12,14 @@ const (
 	ProblemTypeInternal    = "internal_error"
 	ProblemTypeCanceled    = "client_cancelled"
 
-	TitleBadRequest     = "Bad Request"
-	TitleValidation     = "Validation error"
-	TitleConflict       = "Conflict"
-	TitleNotFound       = "Not Found"
-	TitleGatewayTimeout = "Gateway Timeout"
-	TitleRequestTimeout = "Request Timeout"
-	TitleInternalError  = "Internal Server Error"
+	TitleBadRequest      = "Bad Request"
+	TitleValidation      = "Validation error"
+	TitleConflict        = "Conflict"
+	TitleNotFound        = "Not Found"
+	TitleGatewayTimeout  = "Gateway Timeout"
+	TitleRequestTimeout  = "Request Timeout"
+	TitleRequestCanceled = "Request Canceled"
+	TitleInternalError   = "Internal Server Error"
 
 	DetailInvalidURL        = "invalid url"
 	DetailInvalidShortName  = "invalid short_name"
