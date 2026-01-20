@@ -4,16 +4,15 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+
+	"code/internal/app/links"
 )
 
 const (
 	maxRangeLimit = 1000
 )
 
-type Range struct {
-	Start int
-	Count int
-}
+type Range = links.Range
 
 var errInvalidRange = errors.New("invalid range")
 

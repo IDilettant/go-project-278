@@ -35,6 +35,15 @@ func parseListRange(raw string) (Range, PageQuery, bool, error) {
 	}, true, nil
 }
 
+func rangeValue(c *gin.Context) string {
+	raw := strings.TrimSpace(c.GetHeader("Range"))
+	if raw != "" {
+		return raw
+	}
+
+	return c.Query("range")
+}
+
 func writeInvalidRange(c *gin.Context) {
 	problems.WriteProblem(c, problems.Problem{
 		Type:   problems.ProblemTypeValidation,

@@ -24,9 +24,10 @@ type UpdateLinkRequest struct {
 }
 
 func (h *Handler) ListLinks(c *gin.Context) {
-	rng, query, hasRange, err := parseListRange(c.Query("range"))
+	rng, query, hasRange, err := parseListRange(rangeValue(c))
 	if err != nil {
 		writeInvalidRange(c)
+		
 		return
 	}
 
