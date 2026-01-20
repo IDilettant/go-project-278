@@ -60,7 +60,7 @@ func TestAPI_RequestTimeout(t *testing.T) {
 		Links:                   svc,
 		BaseURL:                 "http://localhost:8080",
 		SentryMiddlewareTimeout: time.Second,
-		RequestTimeout:          50 * time.Millisecond,
+		RequestBudget:           50 * time.Millisecond,
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/links", nil)

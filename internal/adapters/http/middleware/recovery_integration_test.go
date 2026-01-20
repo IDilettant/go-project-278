@@ -22,7 +22,7 @@ func TestAPI_PanicRecovery_ReturnsProblemJSON(t *testing.T) {
 		Links:                   svc,
 		BaseURL:                 "http://localhost:8080",
 		SentryMiddlewareTimeout: time.Second,
-		RequestTimeout:          50 * time.Millisecond,
+		RequestBudget:           50 * time.Millisecond,
 	})
 
 	router.GET("/panic", func(c *gin.Context) {

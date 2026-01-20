@@ -115,7 +115,7 @@ func run(m *testing.M) int {
 		Links:                   svc,
 		BaseURL:                 cfg.BaseURL,
 		SentryMiddlewareTimeout: cfg.SentryMiddlewareTimeout,
-		RequestTimeout:          cfg.HTTPRequestTimeout,
+		RequestBudget:           cfg.RequestBudget,
 	})
 
 	return m.Run()
