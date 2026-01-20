@@ -112,7 +112,7 @@ func run(m *testing.M) int {
 
 	repo := pgrepo.NewRepo(db)
 	visitsRepo := pgrepo.NewLinkVisitsRepo(db)
-	svc := links.New(repo, visitsRepo)
+	svc := links.New(repo, visitsRepo, nil)
 
 	router = httpapi.NewEngine(
 		plugins.Logger(),

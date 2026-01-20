@@ -14,8 +14,34 @@ const (
 )
 
 func CORS(allowedOrigins []string) gin.HandlerFunc {
-	allowAll := false
-	allowed := make(map[string]struct{})
+	policy := newCORSPolicy(allowedOrigins)
+
+	return func(c *gin.Context) {
+		origin := normalizeOrigin(c.GetHeader("Origin"))
+		allow := policy.applyOrigin(c, origin)
+
+		if c.Request.Method == http.MethodOptions {
+			handlePreflight(c, allow)
+			return
+		}
+
+		if allow {
+			applyCORSHeaders(c)
+		}
+
+		c.Next()
+	}
+}
+
+type corsPolicy struct {
+	allowAll bool
+	allowed  map[string]struct{}
+}
+
+func newCORSPolicy(allowedOrigins []string) corsPolicy {
+	policy := corsPolicy{
+		allowed: make(map[string]struct{}),
+	}
 
 	for _, origin := range allowedOrigins {
 		origin = normalizeOrigin(origin)
@@ -24,50 +50,53 @@ func CORS(allowedOrigins []string) gin.HandlerFunc {
 		}
 
 		if origin == "*" {
-			allowAll = true
-			allowed = nil
+			policy.allowAll = true
+			policy.allowed = nil
 
 			break
 		}
 
-		allowed[origin] = struct{}{}
+		policy.allowed[origin] = struct{}{}
 	}
 
-	return func(c *gin.Context) {
-		origin := normalizeOrigin(c.GetHeader("Origin"))
-		allow := false
+	return policy
+}
 
-		if origin != "" {
-			if allowAll {
-				allow = true
-				c.Header("Access-Control-Allow-Origin", "*")
-			} else if _, ok := allowed[origin]; ok {
-				allow = true
-				c.Header("Access-Control-Allow-Origin", origin)
-				c.Header("Vary", "Origin")
-			}
-		}
-
-		if c.Request.Method == http.MethodOptions {
-			if !allow {
-				c.AbortWithStatus(http.StatusForbidden)
-				return
-			}
-
-			c.Header("Access-Control-Allow-Methods", allowedMethods)
-			c.Header("Access-Control-Allow-Headers", allowedHeaders)
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		if allow {
-			c.Header("Access-Control-Allow-Methods", allowedMethods)
-			c.Header("Access-Control-Allow-Headers", allowedHeaders)
-			c.Header("Access-Control-Expose-Headers", exposeHeaders)
-		}
-
-		c.Next()
+func (p corsPolicy) applyOrigin(c *gin.Context, origin string) bool {
+	if origin == "" {
+		return false
 	}
+
+	if p.allowAll {
+		c.Header("Access-Control-Allow-Origin", "*")
+		return true
+	}
+
+	if _, ok := p.allowed[origin]; !ok {
+		return false
+	}
+
+	c.Header("Access-Control-Allow-Origin", origin)
+	c.Header("Vary", "Origin")
+
+	return true
+}
+
+func handlePreflight(c *gin.Context, allow bool) {
+	if !allow {
+		c.AbortWithStatus(http.StatusForbidden)
+		return
+	}
+
+	c.Header("Access-Control-Allow-Methods", allowedMethods)
+	c.Header("Access-Control-Allow-Headers", allowedHeaders)
+	c.AbortWithStatus(http.StatusNoContent)
+}
+
+func applyCORSHeaders(c *gin.Context) {
+	c.Header("Access-Control-Allow-Methods", allowedMethods)
+	c.Header("Access-Control-Allow-Headers", allowedHeaders)
+	c.Header("Access-Control-Expose-Headers", exposeHeaders)
 }
 
 func normalizeOrigin(origin string) string {

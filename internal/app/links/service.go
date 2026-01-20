@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -28,10 +27,15 @@ var errVisitsRepoNil = errors.New("link visits repo is nil")
 type Service struct {
 	repo       Repo
 	visitsRepo VisitsRepo
+	log        Logger
 }
 
-func New(repo Repo, visitsRepo VisitsRepo) *Service {
-	return &Service{repo: repo, visitsRepo: visitsRepo}
+func New(repo Repo, visitsRepo VisitsRepo, log Logger) *Service {
+	if log == nil {
+		log = NopLogger{}
+	}
+
+	return &Service{repo: repo, visitsRepo: visitsRepo, log: log}
 }
 
 var _ UseCase = (*Service)(nil)
@@ -108,7 +112,12 @@ func (s *Service) Redirect(ctx context.Context, shortName string, meta VisitMeta
 		}
 
 		if _, err := s.visitsRepo.Create(ctx, visit); err != nil {
-			log.Printf("link visit create: %v", err)
+			s.log.Warn(
+				"link visit create failed",
+				"code", shortName,
+				"link_id", link.ID,
+				"err", err,
+			)
 		}
 	}
 

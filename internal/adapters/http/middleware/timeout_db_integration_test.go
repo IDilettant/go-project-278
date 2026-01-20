@@ -103,7 +103,7 @@ func TestAPI_RequestTimeout_CancelsDBQuery(t *testing.T) {
 
 	errCh := make(chan error, 1)
 	repo := slowRepo{db: db, errCh: errCh}
-	svc := links.New(repo, nil)
+	svc := links.New(repo, nil, nil)
 	router := httpapi.NewEngine(
 		plugins.Recovery(),
 		plugins.RequestTimeout(50*time.Millisecond),

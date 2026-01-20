@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -41,7 +43,8 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 
 	repo := pgrepo.NewRepo(db)
 	visitsRepo := pgrepo.NewLinkVisitsRepo(db)
-	svc := links.New(repo, visitsRepo)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	svc := links.New(repo, visitsRepo, linksSlogLogger{l: logger})
 
 	r := httpapi.NewEngine(
 		plugins.Logger(),
