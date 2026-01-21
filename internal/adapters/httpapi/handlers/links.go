@@ -8,8 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"code/internal/adapters/http/dto"
-	"code/internal/adapters/http/problems"
+	"code/internal/adapters/httpapi/dto"
+	"code/internal/adapters/httpapi/problems"
 	"code/internal/domain"
 )
 

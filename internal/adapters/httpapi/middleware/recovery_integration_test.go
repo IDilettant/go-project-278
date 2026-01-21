@@ -11,17 +11,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 
-	httpapi "code/internal/adapters/http"
-	"code/internal/adapters/http/plugins"
+	httpapi "code/internal/adapters/httpapi"
+	"code/internal/adapters/httpapi/stack"
 	"code/internal/app/links"
-	"code/internal/testutils"
+	testhttp "code/internal/testing/httptest"
 )
 
 func TestAPI_PanicRecovery_ReturnsProblemJSON(t *testing.T) {
 	svc := links.New(timeoutRepo{}, nil, nil)
 	router := httpapi.NewEngine(
-		plugins.Recovery(),
-		plugins.RequestTimeout(50*time.Millisecond),
+		stack.Recovery(),
+		stack.RequestTimeout(50*time.Millisecond),
 	)
 	httpapi.RegisterRoutes(router, httpapi.RouterDeps{
 		Links:   svc,
@@ -37,7 +37,7 @@ func TestAPI_PanicRecovery_ReturnsProblemJSON(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
-	p := testutils.RequireProblem(t, rec.Result(), http.StatusInternalServerError, "internal_error")
+	p := testhttp.RequireProblem(t, rec.Result(), http.StatusInternalServerError, "internal_error")
 	require.Equal(t, "Internal Server Error", p.Title)
 	require.Equal(t, "internal error", p.Detail)
 }

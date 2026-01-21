@@ -1,4 +1,4 @@
-package plugins
+package stack
 
 import (
 	"time"
@@ -6,7 +6,7 @@ import (
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
 
-	"code/internal/adapters/http/middleware"
+	"code/internal/adapters/httpapi/middleware"
 )
 
 func Logger() func(*gin.Engine) {

@@ -11,11 +11,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	httpapi "code/internal/adapters/http"
-	"code/internal/adapters/http/plugins"
+	httpapi "code/internal/adapters/httpapi"
+	"code/internal/adapters/httpapi/stack"
 	"code/internal/app/links"
 	"code/internal/domain"
-	"code/internal/testutils"
+	testhttp "code/internal/testing/httptest"
 )
 
 type timeoutRepo struct{}
@@ -58,8 +58,8 @@ func (timeoutRepo) Delete(_ context.Context, _ int64) error {
 func TestAPI_RequestTimeout(t *testing.T) {
 	svc := links.New(timeoutRepo{}, nil, nil)
 	router := httpapi.NewEngine(
-		plugins.Recovery(),
-		plugins.RequestTimeout(50*time.Millisecond),
+		stack.Recovery(),
+		stack.RequestTimeout(50*time.Millisecond),
 	)
 	httpapi.RegisterRoutes(router, httpapi.RouterDeps{
 		Links:   svc,
@@ -71,7 +71,7 @@ func TestAPI_RequestTimeout(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusGatewayTimeout, rec.Code)
-	p := testutils.RequireProblem(t, rec.Result(), http.StatusGatewayTimeout, "timeout")
+	p := testhttp.RequireProblem(t, rec.Result(), http.StatusGatewayTimeout, "timeout")
 	require.Equal(t, "Gateway Timeout", p.Title)
 	require.Equal(t, "timeout", p.Detail)
 }

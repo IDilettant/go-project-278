@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"code/internal/adapters/http/dto"
+	"code/internal/adapters/httpapi/dto"
 )
 
 func (h *Handler) ListLinkVisits(c *gin.Context) {

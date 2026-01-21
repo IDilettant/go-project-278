@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"code/internal/adapters/http/problems"
+	"code/internal/adapters/httpapi/problems"
 	"code/internal/app/links"
 )
 

@@ -1,4 +1,4 @@
-package testutils
+package httptest
 
 import (
 	"bytes"
@@ -22,7 +22,7 @@ func NewJSONRequest(t *testing.T, method, url string, body any) *http.Request {
 	require.NoError(t, err)
 
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	return req
 }
 
@@ -31,6 +31,6 @@ func DecodeJSON[T any](t *testing.T, r io.Reader) T {
 
 	var v T
 	require.NoError(t, json.NewDecoder(r).Decode(&v))
-	
+
 	return v
 }

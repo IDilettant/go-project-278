@@ -25,13 +25,12 @@ import (
 	tcpg "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	httpapi "code/internal/adapters/http"
-	"code/internal/adapters/http/plugins"
+	httpapi "code/internal/adapters/httpapi"
 	pgrepo "code/internal/adapters/postgres"
 	"code/internal/app/links"
 	"code/internal/platform/config"
 	"code/internal/platform/postgres"
-	"code/internal/testutils"
+	"code/internal/testing/dbtest"
 )
 
 var (
@@ -75,9 +74,9 @@ func run(m *testing.M) int {
 	}
 
 	// open via production helper -> covers postgres.Open
-	rc := testutils.DefaultDBRetryConfig()
+	rc := dbtest.DefaultDBRetryConfig()
 	rc.Timeout = 10 * time.Second
-	db, err = testutils.OpenDBWithRetry(tcCtx, postgres.OpenConfig{
+	db, err = dbtest.OpenDBWithRetry(tcCtx, postgres.OpenConfig{
 		DSN:             dsn,
 		MaxOpenConns:    5,
 		MaxIdleConns:    5,
@@ -115,11 +114,11 @@ func run(m *testing.M) int {
 	svc := links.New(repo, visitsRepo, nil)
 
 	router = httpapi.NewEngine(
-		plugins.Logger(),
-		plugins.Sentry(cfg.SentryMiddlewareTimeout),
-		plugins.Recovery(),
-		plugins.RequestTimeout(cfg.RequestBudget),
-		plugins.CORS(cfg.CORSAllowedOrigins),
+		stack.Logger(),
+		stack.Sentry(cfg.SentryMiddlewareTimeout),
+		stack.Recovery(),
+		stack.RequestTimeout(cfg.RequestBudget),
+		stack.CORS(cfg.CORSAllowedOrigins),
 	)
 
 	httpapi.RegisterRoutes(router, httpapi.RouterDeps{

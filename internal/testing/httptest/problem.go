@@ -1,4 +1,4 @@
-package testutils
+package httptest
 
 import (
 	"encoding/json"

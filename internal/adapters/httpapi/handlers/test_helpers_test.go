@@ -14,7 +14,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"code/internal/testutils"
+	testhttp "code/internal/testing/httptest"
 )
 
 const (
@@ -182,10 +182,10 @@ func doJSONExpectError(t *testing.T, method, path string, body any, want int) {
 	_ = doJSON(t, method, path, body, want)
 }
 
-func requireProblem(t *testing.T, rec *httptest.ResponseRecorder, wantStatus int, wantType string) testutils.Problem {
+func requireProblem(t *testing.T, rec *httptest.ResponseRecorder, wantStatus int, wantType string) testhttp.Problem {
 	t.Helper()
 
-	return testutils.RequireProblem(t, rec.Result(), wantStatus, wantType)
+	return testhttp.RequireProblem(t, rec.Result(), wantStatus, wantType)
 }
 
 func itoa(v int64) string { return fmt.Sprintf("%d", v) }

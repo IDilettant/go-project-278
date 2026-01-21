@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 
-	"code/internal/adapters/http/middleware"
+	"code/internal/adapters/httpapi/middleware"
 )
 
 func TestCORS_AllowsOrigin(t *testing.T) {

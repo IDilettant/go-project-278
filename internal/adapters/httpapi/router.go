@@ -3,7 +3,7 @@ package httpapi
 import (
 	"github.com/gin-gonic/gin"
 
-	"code/internal/adapters/http/handlers"
+	"code/internal/adapters/httpapi/handlers"
 	"code/internal/app/links"
 )
 

@@ -6,7 +6,7 @@ import (
 	"net"
 	"net/http"
 
-	"code/internal/adapters/http/problems"
+	"code/internal/adapters/httpapi/problems"
 	"code/internal/domain"
 )
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"code/internal/adapters/http/problems"
+	"code/internal/adapters/httpapi/problems"
 )
 
 func Recovery() gin.HandlerFunc {

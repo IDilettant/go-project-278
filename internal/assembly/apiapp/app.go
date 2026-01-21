@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/getsentry/sentry-go"
 
-	httpapi "code/internal/adapters/http"
-	"code/internal/adapters/http/plugins"
+	httpapi "code/internal/adapters/httpapi"
+	"code/internal/adapters/httpapi/stack"
 	pgrepo "code/internal/adapters/postgres"
 	"code/internal/app/links"
 	"code/internal/platform/config"
@@ -47,12 +48,12 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*App, err
 	svc := links.New(repo, visitsRepo, appLogger)
 
 	r := httpapi.NewEngine(
-		plugins.Logger(),
-		plugins.RequestID(),
-		plugins.Sentry(cfg.SentryMiddlewareTimeout),
-		plugins.Recovery(),
-		plugins.RequestTimeout(cfg.RequestBudget),
-		plugins.CORS(cfg.CORSAllowedOrigins),
+		stack.Logger(),
+		stack.RequestID(),
+		stack.Sentry(cfg.SentryMiddlewareTimeout),
+		stack.Recovery(),
+		stack.RequestTimeout(cfg.RequestBudget),
+		stack.CORS(cfg.CORSAllowedOrigins),
 	)
 
 	httpapi.RegisterRoutes(r, httpapi.RouterDeps{

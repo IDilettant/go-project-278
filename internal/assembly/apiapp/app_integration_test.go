@@ -21,7 +21,7 @@ import (
 	"code/internal/assembly/apiapp"
 	"code/internal/platform/config"
 	"code/internal/platform/postgres"
-	"code/internal/testutils"
+	"code/internal/testing/dbtest"
 )
 
 func TestApp_New_Run_Close(t *testing.T) {
@@ -43,12 +43,12 @@ func TestApp_New_Run_Close(t *testing.T) {
 	dsn, err := pgC.ConnectionString(ctx, "sslmode=disable")
 	require.NoError(t, err)
 
-	db, err := testutils.OpenDBWithRetry(ctx, postgres.OpenConfig{
+	db, err := dbtest.OpenDBWithRetry(ctx, postgres.OpenConfig{
 		DSN:             dsn,
 		MaxOpenConns:    5,
 		MaxIdleConns:    5,
 		ConnMaxLifetime: 5 * time.Minute,
-	}, testutils.DBRetryConfig{
+	}, dbtest.DBRetryConfig{
 		Timeout: 10 * time.Second,
 		Backoff: 200 * time.Millisecond,
 	})
@@ -123,12 +123,12 @@ func TestApp_GracefulShutdown_Run_StopsOnCancel(t *testing.T) {
 	dsn, err := pgC.ConnectionString(ctx, "sslmode=disable")
 	require.NoError(t, err)
 
-	db, err := testutils.OpenDBWithRetry(ctx, postgres.OpenConfig{
+	db, err := dbtest.OpenDBWithRetry(ctx, postgres.OpenConfig{
 		DSN:             dsn,
 		MaxOpenConns:    5,
 		MaxIdleConns:    5,
 		ConnMaxLifetime: 5 * time.Minute,
-	}, testutils.DBRetryConfig{
+	}, dbtest.DBRetryConfig{
 		Timeout: 10 * time.Second,
 		Backoff: 200 * time.Millisecond,
 	})

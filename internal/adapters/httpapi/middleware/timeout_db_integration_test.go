@@ -15,12 +15,13 @@ import (
 	tcpg "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	httpapi "code/internal/adapters/http"
-	"code/internal/adapters/http/plugins"
+	httpapi "code/internal/adapters/httpapi"
+	"code/internal/adapters/httpapi/stack"
 	"code/internal/app/links"
 	"code/internal/domain"
 	"code/internal/platform/postgres"
-	"code/internal/testutils"
+	dbtest "code/internal/testing/dbtest"
+	testhttp "code/internal/testing/httptest"
 )
 
 type slowRepo struct {
@@ -89,12 +90,12 @@ func TestAPI_RequestTimeout_CancelsDBQuery(t *testing.T) {
 	dsn, err := pgC.ConnectionString(ctx, "sslmode=disable")
 	require.NoError(t, err)
 
-	db, err := testutils.OpenDBWithRetry(ctx, postgres.OpenConfig{
+	db, err := dbtest.OpenDBWithRetry(ctx, postgres.OpenConfig{
 		DSN:             dsn,
 		MaxOpenConns:    5,
 		MaxIdleConns:    5,
 		ConnMaxLifetime: 5 * time.Minute,
-	}, testutils.DBRetryConfig{
+	}, dbtest.DBRetryConfig{
 		Timeout: 10 * time.Second,
 		Backoff: 200 * time.Millisecond,
 	})
@@ -105,8 +106,8 @@ func TestAPI_RequestTimeout_CancelsDBQuery(t *testing.T) {
 	repo := slowRepo{db: db, errCh: errCh}
 	svc := links.New(repo, nil, nil)
 	router := httpapi.NewEngine(
-		plugins.Recovery(),
-		plugins.RequestTimeout(50*time.Millisecond),
+		stack.Recovery(),
+		stack.RequestTimeout(50*time.Millisecond),
 	)
 	httpapi.RegisterRoutes(router, httpapi.RouterDeps{
 		Links:   svc,
@@ -118,7 +119,7 @@ func TestAPI_RequestTimeout_CancelsDBQuery(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusGatewayTimeout, rec.Code)
-	p := testutils.RequireProblem(t, rec.Result(), http.StatusGatewayTimeout, "timeout")
+	p := testhttp.RequireProblem(t, rec.Result(), http.StatusGatewayTimeout, "timeout")
 	require.Equal(t, "Gateway Timeout", p.Title)
 	require.Equal(t, "timeout", p.Detail)
 

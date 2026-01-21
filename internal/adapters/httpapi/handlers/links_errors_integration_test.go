@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"code/internal/testutils"
+	testhttp "code/internal/testing/httptest"
 )
 
 func TestLinksAPI_Errors(t *testing.T) {
@@ -148,7 +148,7 @@ func TestLinksAPI_Errors(t *testing.T) {
 			case tc.rawBody != "":
 				req = httptest.NewRequest(tc.method, tc.path, bytes.NewBufferString(tc.rawBody))
 			case tc.body != nil:
-				req = testutils.NewJSONRequest(t, tc.method, tc.path, tc.body)
+				req = testhttp.NewJSONRequest(t, tc.method, tc.path, tc.body)
 			default:
 				req = httptest.NewRequest(tc.method, tc.path, nil)
 			}
