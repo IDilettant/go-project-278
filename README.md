@@ -1,7 +1,7 @@
 # URL Shortener Service
 
 ![Go](https://img.shields.io/badge/go-1.25-00ADD8?logo=go&logoColor=white)
-![License](https://img.shields.io/github/license/IDilettant/go-project-278)
+![License](https://img.shields.io/badge/license-MIT-green)
 [![Actions Status](https://github.com/IDilettant/go-project-278/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/IDilettant/go-project-278/actions)
 [![CI](https://github.com/IDilettant/go-project-278/actions/workflows/ci.yml/badge.svg)](https://github.com/IDilettant/go-project-278/actions/workflows/ci.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=IDilettant_go-project-278&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=IDilettant_go-project-278)
