@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -41,7 +42,7 @@ var (
 	router *gin.Engine
 )
 
-var shortNameRe = regexp.MustCompile(`^[a-zA-Z0-9]{4,32}$`)
+var shortNameRe = regexp.MustCompile(`^[a-zA-Z0-9]{3,32}$`)
 
 func TestMain(m *testing.M) {
 	os.Exit(run(m))
@@ -260,11 +261,10 @@ func TestAPI_CreateLink_ConcurrentConflict(t *testing.T) {
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 			require.Equal(t, shortName, body["short_name"])
 			require.NotEmpty(t, body["short_url"])
-		case http.StatusConflict:
+		case http.StatusUnprocessableEntity:
 			conflicts++
-			p := requireProblem(t, rec, http.StatusConflict, "conflict")
-			require.Equal(t, "Conflict", p.Title)
-			require.Equal(t, "short_name already exists", p.Detail)
+			errs := requireValidationErrors(t, rec, http.StatusUnprocessableEntity)
+			require.Equal(t, "short name already in use", errs["short_name"])
 		default:
 			t.Fatalf("unexpected status: %d body=%s", rec.Code, rec.Body.String())
 		}
@@ -390,10 +390,13 @@ func TestAPI_Conflict_Create(t *testing.T) {
 
 	createLink(t, "https://example.com/1", "dupe")
 
-	doJSONExpectError(t, http.MethodPost, "/api/links", map[string]any{
+	rec := doRequest(t, http.MethodPost, "/api/links", map[string]any{
 		"original_url": "https://example.com/2",
 		"short_name":   "dupe",
-	}, http.StatusConflict)
+	})
+
+	errs := requireValidationErrors(t, rec, http.StatusUnprocessableEntity)
+	require.Equal(t, "short name already in use", errs["short_name"])
 }
 
 func TestAPI_Update_ShortNameAllowed(t *testing.T) {
@@ -413,7 +416,7 @@ func TestAPI_Update_ShortNameAllowed(t *testing.T) {
 	require.Equal(t, "https://example.com/a2", asString(t, updated["original_url"]))
 }
 
-func TestAPI_Update_ShortNameMissing_Invalid(t *testing.T) {
+func TestAPI_Update_ShortNameMissing_Generates(t *testing.T) {
 	resetLinks(t)
 
 	createLink(t, "https://example.com/a", "aaaa")
@@ -421,12 +424,17 @@ func TestAPI_Update_ShortNameMissing_Invalid(t *testing.T) {
 	created := getLinkByShortName(t, "aaaa")
 	id := asInt64(t, created["id"])
 
-	doJSONExpectError(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
+	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
 		"original_url": "https://example.com/a2",
-	}, http.StatusBadRequest)
+	}, http.StatusOK)
+
+	newShort := asString(t, updated["short_name"])
+	require.NotEqual(t, "aaaa", newShort)
+	require.True(t, shortNameRe.MatchString(newShort))
+	require.Equal(t, "https://example.com/a2", asString(t, updated["original_url"]))
 }
 
-func TestAPI_Update_ShortNameEmpty_Invalid(t *testing.T) {
+func TestAPI_Update_ShortNameEmpty_Generates(t *testing.T) {
 	resetLinks(t)
 
 	createLink(t, "https://example.com/a", "aaaa")
@@ -434,10 +442,15 @@ func TestAPI_Update_ShortNameEmpty_Invalid(t *testing.T) {
 	created := getLinkByShortName(t, "aaaa")
 	id := asInt64(t, created["id"])
 
-	doJSONExpectError(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
+	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
 		"original_url": "https://example.com/a2",
 		"short_name":   "",
-	}, http.StatusBadRequest)
+	}, http.StatusOK)
+
+	newShort := asString(t, updated["short_name"])
+	require.NotEqual(t, "aaaa", newShort)
+	require.True(t, shortNameRe.MatchString(newShort))
+	require.Equal(t, "https://example.com/a2", asString(t, updated["original_url"]))
 }
 
 func TestAPI_Update_ShortNameConflict(t *testing.T) {
@@ -452,58 +465,67 @@ func TestAPI_Update_ShortNameConflict(t *testing.T) {
 	sid := asInt64(t, second["id"])
 	target := asString(t, first["short_name"])
 
-	doJSONExpectError(t, http.MethodPut, "/api/links/"+itoa(sid), map[string]any{
-		"original_url": "https://example.com/b2",
-		"short_name":   target,
-	}, http.StatusConflict)
-}
-
-func TestAPI_Update_ShortNameConflict_ReturnsProblem(t *testing.T) {
-	resetLinks(t)
-
-	createLink(t, "https://example.com/a", "aaaa")
-	createLink(t, "https://example.com/b", "bbbb")
-
-	first := getLinkByShortName(t, "aaaa")
-	second := getLinkByShortName(t, "bbbb")
-	sid := asInt64(t, second["id"])
-	target := asString(t, first["short_name"])
-
 	rec := doRequest(t, http.MethodPut, "/api/links/"+itoa(sid), map[string]any{
 		"original_url": "https://example.com/b2",
 		"short_name":   target,
 	})
 
-	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
-	p := requireProblem(t, rec, http.StatusConflict, "conflict")
-	require.Equal(t, "Conflict", p.Title)
-	require.Equal(t, "short_name already exists", p.Detail)
+	errs := requireValidationErrors(t, rec, http.StatusUnprocessableEntity)
+	require.Equal(t, "short name already in use", errs["short_name"])
 }
 
-func TestAPI_ValidationAndBadJSON(t *testing.T) {
+func TestAPI_Validation(t *testing.T) {
 	resetLinks(t)
 
 	// invalid short_name: too short
-	doJSONExpectError(t, http.MethodPost, "/api/links", map[string]any{
+	rec := doRequest(t, http.MethodPost, "/api/links", map[string]any{
 		"original_url": "https://example.com",
-		"short_name":   "abc",
-	}, http.StatusBadRequest)
+		"short_name":   "ab",
+	})
+	errs := requireValidationErrors(t, rec, http.StatusUnprocessableEntity)
+	require.Contains(t, errs["short_name"], "failed on the 'min' tag")
 
 	// invalid short_name: forbidden chars
-	doJSONExpectError(t, http.MethodPost, "/api/links", map[string]any{
+	rec = doRequest(t, http.MethodPost, "/api/links", map[string]any{
 		"original_url": "https://example.com",
 		"short_name":   "ab_cd",
-	}, http.StatusBadRequest)
-	doJSONExpectError(t, http.MethodPost, "/api/links", map[string]any{
+	})
+	errs = requireValidationErrors(t, rec, http.StatusUnprocessableEntity)
+	require.Equal(t, "invalid short_name", errs["short_name"])
+
+	// invalid short_name: too long
+	rec = doRequest(t, http.MethodPost, "/api/links", map[string]any{
+		"original_url": "https://example.com",
+		"short_name":   strings.Repeat("a", 33),
+	})
+	errs = requireValidationErrors(t, rec, http.StatusUnprocessableEntity)
+	require.Contains(t, errs["short_name"], "failed on the 'max' tag")
+
+	rec = doRequest(t, http.MethodPost, "/api/links", map[string]any{
 		"original_url": "https://example.com",
 		"short_name":   "ab-cd",
-	}, http.StatusBadRequest)
+	})
+	errs = requireValidationErrors(t, rec, http.StatusUnprocessableEntity)
+	require.Equal(t, "invalid short_name", errs["short_name"])
 
 	// invalid url
-	doJSONExpectError(t, http.MethodPost, "/api/links", map[string]any{
+	rec = doRequest(t, http.MethodPost, "/api/links", map[string]any{
 		"original_url": "not-a-url",
 		"short_name":   "good",
-	}, http.StatusBadRequest)
+	})
+	errs = requireValidationErrors(t, rec, http.StatusUnprocessableEntity)
+	require.Contains(t, errs["original_url"], "failed on the 'url' tag")
+}
+
+func TestAPI_Create_MissingOriginalURL_Required(t *testing.T) {
+	resetLinks(t)
+
+	rec := doRequest(t, http.MethodPost, "/api/links", map[string]any{
+		"short_name": "good",
+	})
+
+	errs := requireValidationErrors(t, rec, http.StatusUnprocessableEntity)
+	require.Contains(t, errs["original_url"], "failed on the 'required' tag")
 }
 
 func TestAPI_Create_AutoShortName(t *testing.T) {
@@ -513,7 +535,7 @@ func TestAPI_Create_AutoShortName(t *testing.T) {
 
 	created := getSingleLink(t)
 	short := asString(t, created["short_name"])
-	require.True(t, shortNameRe.MatchString(short), "generated short_name must be alnum 4..32, got %q", short)
+	require.True(t, shortNameRe.MatchString(short), "generated short_name must be alnum 3..32, got %q", short)
 
 	req := httptest.NewRequest(http.MethodGet, "/r/"+short, nil)
 	rec2 := httptest.NewRecorder()
@@ -523,6 +545,18 @@ func TestAPI_Create_AutoShortName(t *testing.T) {
 	require.Equal(t, "https://example.com/auto", rec2.Header().Get("Location"))
 }
 
+func TestAPI_Create_ShortNameSpacesOnly_Generates(t *testing.T) {
+	resetLinks(t)
+
+	created := doJSON(t, http.MethodPost, "/api/links", map[string]any{
+		"original_url": "https://example.com/space",
+		"short_name":   "   ",
+	}, http.StatusCreated)
+
+	short := asString(t, created["short_name"])
+	require.True(t, shortNameRe.MatchString(short))
+}
+
 func TestAPI_Redirect_InvalidShortName_400(t *testing.T) {
 	resetLinks(t)
 
@@ -530,10 +564,27 @@ func TestAPI_Redirect_InvalidShortName_400(t *testing.T) {
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
-	require.Equal(t, http.StatusBadRequest, rec.Code)
-	p := requireProblem(t, rec, http.StatusBadRequest, "validation_error")
-	require.Equal(t, "Validation error", p.Title)
-	require.Equal(t, "invalid short_name", p.Detail)
+	errs := requireValidationErrors(t, rec, http.StatusUnprocessableEntity)
+	require.Equal(t, "invalid short_name", errs["short_name"])
+}
+
+func TestAPI_Update_ShortNameSpacesOnly_Generates(t *testing.T) {
+	resetLinks(t)
+
+	createLink(t, "https://example.com/a", "aaaa")
+
+	created := getLinkByShortName(t, "aaaa")
+	id := asInt64(t, created["id"])
+
+	updated := doJSON(t, http.MethodPut, "/api/links/"+itoa(id), map[string]any{
+		"original_url": "https://example.com/a2",
+		"short_name":   "   ",
+	}, http.StatusOK)
+
+	newShort := asString(t, updated["short_name"])
+	require.NotEqual(t, "aaaa", newShort)
+	require.True(t, shortNameRe.MatchString(newShort))
+	require.Equal(t, "https://example.com/a2", asString(t, updated["original_url"]))
 }
 
 func TestAPI_Redirect_NotFound_404(t *testing.T) {
