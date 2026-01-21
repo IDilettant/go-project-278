@@ -230,20 +230,24 @@ func TestServiceCreate_ExplicitShortNameValidation(t *testing.T) {
 	})
 }
 
-func TestServiceUpdate_EmptyShortNameInvalid(t *testing.T) {
+func TestServiceUpdate_EmptyShortNameGenerates(t *testing.T) {
 	ctx := context.Background()
+	var gotShortName string
 
 	repo := &stubRepo{
 		t: t,
 		updateFunc: func(ctx context.Context, id int64, originalURL, shortName string) (domain.Link, error) {
-			t.Fatalf("Update should not be called")
-			return domain.Link{}, nil
+			gotShortName = shortName
+			return domain.Link{ID: id, OriginalURL: originalURL, ShortName: shortName}, nil
 		},
 	}
 
 	svc := New(repo, nil, nil)
-	_, err := svc.Update(ctx, 1, "https://example.com/new", "")
-	require.ErrorIs(t, err, domain.ErrInvalidShortName)
+	link, err := svc.Update(ctx, 1, "https://example.com/new", "")
+	require.NoError(t, err)
+	require.NotEmpty(t, gotShortName)
+	require.NoError(t, domain.ValidateShortName(gotShortName))
+	require.Equal(t, gotShortName, link.ShortName)
 }
 
 func TestServiceUpdate_ExplicitShortName(t *testing.T) {
@@ -277,6 +281,21 @@ func TestServiceUpdate_InvalidShortName(t *testing.T) {
 	svc := New(repo, nil, nil)
 	_, err := svc.Update(ctx, 1, "https://example.com/new", "ab_cd")
 	require.ErrorIs(t, err, domain.ErrInvalidShortName)
+}
+
+func TestServiceUpdate_ConflictReturnsError(t *testing.T) {
+	ctx := context.Background()
+
+	repo := &stubRepo{
+		t: t,
+		updateFunc: func(ctx context.Context, id int64, originalURL, shortName string) (domain.Link, error) {
+			return domain.Link{}, domain.ErrShortNameConflict
+		},
+	}
+
+	svc := New(repo, nil, nil)
+	_, err := svc.Update(ctx, 1, "https://example.com/new", "conflict")
+	require.ErrorIs(t, err, domain.ErrShortNameConflict)
 }
 
 func TestServiceUpdate_NotFound(t *testing.T) {
