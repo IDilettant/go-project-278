@@ -7,8 +7,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
-	"code/internal/adapters/httpapi/problems"
 )
 
 func bindJSONStrict(c *gin.Context, dst any) error {
@@ -34,10 +32,7 @@ func bindJSONStrict(c *gin.Context, dst any) error {
 }
 
 func badJSON(c *gin.Context) {
-	problems.WriteProblem(c, problems.Problem{
-		Type:   problems.ProblemTypeInvalidJSON,
-		Title:  problems.TitleBadRequest,
-		Status: http.StatusBadRequest,
-		Detail: problems.DetailInvalidJSON,
+	c.JSON(http.StatusBadRequest, gin.H{
+		"error": "invalid request",
 	})
 }
