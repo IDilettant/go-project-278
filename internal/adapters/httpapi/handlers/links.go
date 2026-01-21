@@ -14,20 +14,20 @@ import (
 )
 
 type CreateLinkRequest struct {
-	OriginalURL string `json:"original_url" example:"https://example.com"`
-	ShortName   string `json:"short_name" example:"abc123"`
+	OriginalURL string `json:"original_url" validate:"required,url" example:"https://example.com"`
+	ShortName   string `json:"short_name" validate:"omitempty,min=3,max=32" example:"abc123"`
 }
 
 type UpdateLinkRequest struct {
-	OriginalURL string `json:"original_url" example:"https://example.com/updated"`
-	ShortName   string `json:"short_name" example:"abc123"`
+	OriginalURL string `json:"original_url" validate:"required,url" example:"https://example.com/updated"`
+	ShortName   string `json:"short_name" validate:"omitempty,min=3,max=32" example:"abc123"`
 }
 
 func (h *Handler) ListLinks(c *gin.Context) {
 	rng, query, hasRange, err := parseListRange(rangeValue(c))
 	if err != nil {
 		writeInvalidRange(c)
-		
+
 		return
 	}
 
@@ -74,6 +74,15 @@ func (h *Handler) CreateLink(c *gin.Context) {
 		return
 	}
 
+	req.OriginalURL = strings.TrimSpace(req.OriginalURL)
+	req.ShortName = strings.TrimSpace(req.ShortName)
+
+	if errs, ok := validateStruct(req); ok {
+		writeValidationErrors(c, errs)
+
+		return
+	}
+
 	link, err := h.svc.Create(c.Request.Context(), req.OriginalURL, req.ShortName)
 	if err != nil {
 		h.fail(c, err)
@@ -116,13 +125,11 @@ func (h *Handler) UpdateLink(c *gin.Context) {
 		return
 	}
 
-	if req.ShortName == "" || strings.TrimSpace(req.ShortName) == "" {
-		problems.WriteProblem(c, problems.Problem{
-			Type:   problems.ProblemTypeValidation,
-			Title:  problems.TitleValidation,
-			Status: http.StatusBadRequest,
-			Detail: problems.DetailInvalidShortName,
-		})
+	req.OriginalURL = strings.TrimSpace(req.OriginalURL)
+	req.ShortName = strings.TrimSpace(req.ShortName)
+
+	if errs, ok := validateStruct(req); ok {
+		writeValidationErrors(c, errs)
 
 		return
 	}
