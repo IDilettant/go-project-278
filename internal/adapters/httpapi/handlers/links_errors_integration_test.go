@@ -16,7 +16,68 @@ import (
 func TestLinksAPI_Errors(t *testing.T) {
 	resetLinks(t)
 
-	tests := []struct {
+	invalidRequestTests := []struct {
+		name    string
+		method  string
+		path    string
+		headers map[string]string
+		body    any
+		rawBody string
+	}{
+		{
+			name:   "invalid_json",
+			method: http.MethodPost,
+			path:   apiLinksPath,
+			headers: map[string]string{
+				"Content-Type": "application/json",
+			},
+			rawBody: "{not-json",
+		},
+		{
+			name:   "strict_json_unknown_field",
+			method: http.MethodPost,
+			path:   apiLinksPath,
+			body: map[string]any{
+				"original_url": "https://example.com",
+				"extra":        "nope",
+			},
+		},
+		{
+			name:   "strict_json_extra_object",
+			method: http.MethodPost,
+			path:   apiLinksPath,
+			headers: map[string]string{
+				"Content-Type": "application/json",
+			},
+			rawBody: `{"original_url":"https://example.com"}{"short_name":"good"}`,
+		},
+	}
+
+	for _, tc := range invalidRequestTests {
+		t.Run(tc.name, func(t *testing.T) {
+			var req *http.Request
+
+			switch {
+			case tc.rawBody != "":
+				req = httptest.NewRequest(tc.method, tc.path, bytes.NewBufferString(tc.rawBody))
+			case tc.body != nil:
+				req = testhttp.NewJSONRequest(t, tc.method, tc.path, tc.body)
+			default:
+				req = httptest.NewRequest(tc.method, tc.path, nil)
+			}
+
+			for k, v := range tc.headers {
+				req.Header.Set(k, v)
+			}
+
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+
+			requireInvalidRequest(t, rec)
+		})
+	}
+
+	problemTests := []struct {
 		name    string
 		method  string
 		path    string
@@ -28,45 +89,6 @@ func TestLinksAPI_Errors(t *testing.T) {
 		title   string
 		detail  string
 	}{
-		{
-			name:   "invalid_json",
-			method: http.MethodPost,
-			path:   apiLinksPath,
-			headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-			rawBody: "{not-json",
-			status:  http.StatusBadRequest,
-			typeID:  "invalid_json",
-			title:   "Bad Request",
-			detail:  "invalid json",
-		},
-		{
-			name:   "strict_json_unknown_field",
-			method: http.MethodPost,
-			path:   apiLinksPath,
-			body: map[string]any{
-				"original_url": "https://example.com",
-				"extra":        "nope",
-			},
-			status: http.StatusBadRequest,
-			typeID: "invalid_json",
-			title:  "Bad Request",
-			detail: "invalid json",
-		},
-		{
-			name:   "strict_json_extra_object",
-			method: http.MethodPost,
-			path:   apiLinksPath,
-			headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-			rawBody: `{"original_url":"https://example.com"}{"short_name":"good"}`,
-			status:  http.StatusBadRequest,
-			typeID:  "invalid_json",
-			title:   "Bad Request",
-			detail:  "invalid json",
-		},
 		{
 			name:   "invalid_range",
 			method: http.MethodGet,
@@ -140,7 +162,7 @@ func TestLinksAPI_Errors(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
+	for _, tc := range problemTests {
 		t.Run(tc.name, func(t *testing.T) {
 			var req *http.Request
 
