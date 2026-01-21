@@ -154,6 +154,10 @@ func (s *Service) Update(ctx context.Context, id int64, originalURL, shortName s
 		return domain.Link{}, err
 	}
 
+	if shortName == "" {
+		return s.updateWithGeneratedShortName(ctx, id, originalURL)
+	}
+
 	if err := domain.ValidateShortName(shortName); err != nil {
 		return domain.Link{}, err
 	}
@@ -164,6 +168,32 @@ func (s *Service) Update(ctx context.Context, id int64, originalURL, shortName s
 	}
 
 	return link, nil
+}
+
+func (s *Service) updateWithGeneratedShortName(
+	ctx context.Context,
+	id int64,
+	originalURL string,
+) (domain.Link, error) {
+	for range autoShortNameAttempts {
+		gen, err := generateShortName()
+		if err != nil {
+			return domain.Link{}, fmt.Errorf("links generate short name: %w", err)
+		}
+
+		link, err := s.repo.Update(ctx, id, originalURL, gen)
+		if errors.Is(err, domain.ErrShortNameConflict) {
+			continue
+		}
+
+		if err != nil {
+			return domain.Link{}, fmt.Errorf("links update: %w", err)
+		}
+
+		return link, nil
+	}
+
+	return domain.Link{}, domain.ErrShortNameConflict
 }
 
 func (s *Service) Delete(ctx context.Context, id int64) error {
