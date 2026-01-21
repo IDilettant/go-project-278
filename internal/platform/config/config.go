@@ -348,6 +348,7 @@ func loadCORS(cfg *Config) {
 		if origin == "" {
 			continue
 		}
+		
 		cfg.CORSAllowedOrigins = append(cfg.CORSAllowedOrigins, origin)
 	}
 }
