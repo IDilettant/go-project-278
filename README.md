@@ -13,6 +13,12 @@
 
 URL shortener with REST API, redirect support, and visit analytics. The service exposes link CRUD endpoints, redirects by short code, and stores visits (IP, user-agent, referer, status) in PostgreSQL. It follows a hexagonal/clean architecture and is designed to run behind Caddy (static frontend + reverse proxy) with Gin as the HTTP server.
 
+## Live Demo
+
+The service is deployed on Render and available at:
+
+- **Base URL:** https://shortener-sw9b.onrender.com
+- **Health check:** https://shortener-sw9b.onrender.com/ping
 
 ## Project Structure
 
@@ -31,24 +37,35 @@ URL shortener with REST API, redirect support, and visit analytics. The service 
 ```mermaid
 flowchart LR
   client[Client] -->|HTTP| caddy[Caddy]
-  caddy -->|/api, /r| api[Go API (Gin)]
-  caddy -->|static assets| ui[Frontend UI]
 
-  api --> handlers[HTTP Handlers]
-  handlers --> usecase[links.Service]
-  usecase --> repo[Postgres Repo (sqlc)]
-  repo --> db[(PostgreSQL)]
+  subgraph Adapters
+    api[HTTP API Gin]
+    ui[Frontend UI static]
+    pg[Postgres Adapter sqlc]
+    obs[Observability]
+  end
 
-  api --> sentry[Sentry]
+  subgraph Application
+    svc[links.Service use cases]
+    ports[(Ports)]
+  end
+
+  subgraph Domain
+    model[Domain model and validation]
+  end
+
+  caddy -->|API| api
+  caddy -->|redirect| api
+  caddy -->|static| ui
+
+  api --> svc
+  svc --> model
+  svc --> ports
+  ports --> pg
+  api --> obs
 ```
 
 ## Getting Started
-
-### Prerequisites
-
-- Go 1.25
-- Docker (for local Postgres and migrations)
-- Node.js (only if you run `make dev-all` for frontend)
 
 ### Local backend (API only)
 
