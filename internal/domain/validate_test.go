@@ -15,13 +15,13 @@ func TestValidateShortName(t *testing.T) {
 		in   string
 		ok   bool
 	}{
-		{"ok/min_len", "abcd", true},
+		{"ok/min_len", "abc", true},
 		{"ok/mixed_case_digits", "aBcD12", true},
 		{"ok/max_len_32", strings.Repeat("a", 32), true},
 
 		{"bad/empty", "", false},
 		{"bad/spaces_only", "   ", false},
-		{"bad/too_short_3", "abc", false},
+		{"bad/too_short_2", "ab", false},
 		{"bad/too_long_33", strings.Repeat("a", 33), false},
 		{"bad/space_inside", "ab cd", false},
 		{"bad/slash", "ab/cd", false},
