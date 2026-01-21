@@ -188,6 +188,32 @@ func requireProblem(t *testing.T, rec *httptest.ResponseRecorder, wantStatus int
 	return testhttp.RequireProblem(t, rec.Result(), wantStatus, wantType)
 }
 
+func requireInvalidRequest(t *testing.T, rec *httptest.ResponseRecorder) {
+	t.Helper()
+
+	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+
+	var out struct {
+		Error string `json:"error"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
+	require.Equal(t, "invalid request", out.Error)
+}
+
+func requireValidationErrors(t *testing.T, rec *httptest.ResponseRecorder, wantStatus int) map[string]string {
+	t.Helper()
+
+	require.Equal(t, wantStatus, rec.Code, rec.Body.String())
+
+	var out struct {
+		Errors map[string]string `json:"errors"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
+	require.NotEmpty(t, out.Errors)
+
+	return out.Errors
+}
+
 func itoa(v int64) string { return fmt.Sprintf("%d", v) }
 
 func asString(t *testing.T, v any) string {
