@@ -26,6 +26,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	httpapi "code/internal/adapters/httpapi"
+	"code/internal/adapters/httpapi/stack"
 	pgrepo "code/internal/adapters/postgres"
 	"code/internal/app/links"
 	"code/internal/platform/config"
