@@ -19,27 +19,6 @@ func problemFromError(err error) problems.Problem {
 			Status: http.StatusNotFound,
 			Detail: problems.DetailNotFound,
 		}
-	case errors.Is(err, domain.ErrInvalidURL):
-		return problems.Problem{
-			Type:   problems.ProblemTypeValidation,
-			Title:  problems.TitleValidation,
-			Status: http.StatusBadRequest,
-			Detail: problems.DetailInvalidURL,
-		}
-	case errors.Is(err, domain.ErrInvalidShortName):
-		return problems.Problem{
-			Type:   problems.ProblemTypeValidation,
-			Title:  problems.TitleValidation,
-			Status: http.StatusBadRequest,
-			Detail: problems.DetailInvalidShortName,
-		}
-	case errors.Is(err, domain.ErrShortNameConflict):
-		return problems.Problem{
-			Type:   problems.ProblemTypeConflict,
-			Title:  problems.TitleConflict,
-			Status: http.StatusConflict,
-			Detail: problems.DetailShortNameConflict,
-		}
 	case isTimeout(err):
 		return problems.Problem{
 			Type:   problems.ProblemTypeTimeout,
