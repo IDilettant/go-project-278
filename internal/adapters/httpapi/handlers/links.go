@@ -86,7 +86,8 @@ func (h *Handler) ListLinks(c *gin.Context) {
 func (h *Handler) CreateLink(c *gin.Context) {
 	var req CreateLinkRequest
 
-	if err := BindJSONStrict(c, &req); err != nil {
+	err := BindJSONStrict(c, &req)
+	if err != nil {
 		badJSON(c)
 
 		return
@@ -136,7 +137,8 @@ func (h *Handler) UpdateLink(c *gin.Context) {
 
 	var req UpdateLinkRequest
 
-	if err := BindJSONStrict(c, &req); err != nil {
+	err := BindJSONStrict(c, &req)
+	if err != nil {
 		badJSON(c)
 
 		return
