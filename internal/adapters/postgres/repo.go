@@ -58,7 +58,7 @@ func (r *Repo) listLinks(ctx context.Context, orderBy string, limit, offset *int
 	if limit != nil {
 		builder = builder.Limit(uint64(*limit))
 	}
-	
+
 	if offset != nil {
 		builder = builder.Offset(uint64(*offset))
 	}
@@ -70,7 +70,7 @@ func (r *Repo) listLinks(ctx context.Context, orderBy string, limit, offset *int
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("postgres: %s: %w", op, err)
+		return nil, fmt.Errorf(errOpFmt, op, err)
 	}
 	defer func() {
 		_ = rows.Close()
@@ -80,13 +80,13 @@ func (r *Repo) listLinks(ctx context.Context, orderBy string, limit, offset *int
 	for rows.Next() {
 		var item domain.Link
 		if err := rows.Scan(&item.ID, &item.OriginalURL, &item.ShortName, &item.CreatedAt); err != nil {
-			return nil, fmt.Errorf("postgres: %s: %w", op, err)
+			return nil, fmt.Errorf(errOpFmt, op, err)
 		}
-		
+
 		out = append(out, item)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("postgres: %s: %w", op, err)
+		return nil, fmt.Errorf(errOpFmt, op, err)
 	}
 
 	return out, nil
