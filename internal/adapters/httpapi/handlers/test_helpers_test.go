@@ -8,12 +8,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"code/internal/app/links"
 	testhttp "code/internal/testing/httptest"
 )
 
@@ -198,6 +200,24 @@ func requireInvalidRequest(t *testing.T, rec *httptest.ResponseRecorder) {
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 	require.Equal(t, "invalid request", out.Error)
+}
+
+func sortJSON(t *testing.T, field string, order links.SortOrder) string {
+	t.Helper()
+
+	raw, err := json.Marshal([]string{field, string(order)})
+	require.NoError(t, err)
+
+	return url.QueryEscape(string(raw))
+}
+
+func sortJSONRaw(t *testing.T, field, order string) string {
+	t.Helper()
+
+	raw, err := json.Marshal([]string{field, order})
+	require.NoError(t, err)
+
+	return url.QueryEscape(string(raw))
 }
 
 func requireValidationErrors(t *testing.T, rec *httptest.ResponseRecorder, wantStatus int) map[string]string {
