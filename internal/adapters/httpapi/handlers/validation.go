@@ -4,29 +4,36 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 )
 
-var validate = newValidator()
+var initValidationOnce sync.Once
 
-func newValidator() *validator.Validate {
-	v := validator.New()
-	v.RegisterTagNameFunc(func(field reflect.StructField) string {
-		name := strings.Split(field.Tag.Get("json"), ",")[0]
-		if name == "-" {
-			return ""
+// InitValidation configures validator tag names to use JSON field names.
+func InitValidation() {
+	initValidationOnce.Do(func() {
+		v, ok := binding.Validator.Engine().(*validator.Validate)
+		if !ok {
+			return
 		}
 
-		return name
-	})
+		v.RegisterTagNameFunc(func(field reflect.StructField) string {
+			name := strings.Split(field.Tag.Get("json"), ",")[0]
+			if name == "-" {
+				return ""
+			}
 
-	return v
+			return name
+		})
+	})
 }
 
 func validateStruct(v any) (map[string]string, bool) {
-	if err := validate.Struct(v); err != nil {
+	if err := binding.Validator.ValidateStruct(v); err != nil {
 		verrs, ok := err.(validator.ValidationErrors)
 		if !ok {
 			return nil, false
@@ -38,11 +45,11 @@ func validateStruct(v any) (map[string]string, bool) {
 			if field == "" {
 				continue
 			}
-			
+
 			if _, exists := out[field]; exists {
 				continue
 			}
-			
+
 			out[field] = verr.Error()
 		}
 

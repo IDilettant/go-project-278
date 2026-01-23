@@ -12,6 +12,7 @@ import (
 	"github.com/getsentry/sentry-go"
 
 	httpapi "code/internal/adapters/httpapi"
+	"code/internal/adapters/httpapi/handlers"
 	"code/internal/adapters/httpapi/stack"
 	pgrepo "code/internal/adapters/postgres"
 	"code/internal/app/links"
@@ -26,6 +27,8 @@ type App struct {
 }
 
 func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*App, error) {
+	handlers.InitValidation()
+
 	if err := sentry.Init(sentry.ClientOptions{Dsn: cfg.SentryDSN}); err != nil {
 		return nil, fmt.Errorf("init sentry: %w", err)
 	}

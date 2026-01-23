@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,6 +28,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	httpapi "code/internal/adapters/httpapi"
+	"code/internal/adapters/httpapi/handlers"
 	"code/internal/adapters/httpapi/stack"
 	pgrepo "code/internal/adapters/postgres"
 	"code/internal/app/links"
@@ -111,6 +113,8 @@ func run(m *testing.M) int {
 		return 1
 	}
 
+	handlers.InitValidation()
+
 	repo := pgrepo.NewRepo(db)
 	visitsRepo := pgrepo.NewLinkVisitsRepo(db)
 	svc := links.New(repo, visitsRepo, nil)
@@ -164,15 +168,15 @@ func TestAPI_ListLinks_Range(t *testing.T) {
 
 	seedLinks(t, 11)
 
-	rec := doRequest(t, http.MethodGet, "/api/links?range=[0,10]", nil)
+	rec := doRequest(t, http.MethodGet, "/api/links?range=[0,4]", nil)
 	require.Equal(t, http.StatusOK, rec.Code)
-	require.Equal(t, "links 0-9/11", rec.Header().Get("Content-Range"))
+	require.Equal(t, "links 0-4/11", rec.Header().Get("Content-Range"))
 
 	var list []map[string]any
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &list))
-	require.Len(t, list, 10)
+	require.Len(t, list, 5)
 	require.Equal(t, int64(1), asInt64(t, list[0]["id"]))
-	require.Equal(t, int64(10), asInt64(t, list[9]["id"]))
+	require.Equal(t, int64(5), asInt64(t, list[4]["id"]))
 
 	rec2 := doRequest(t, http.MethodGet, "/api/links?range=[5,10]", nil)
 	require.Equal(t, http.StatusOK, rec2.Code)
@@ -183,6 +187,105 @@ func TestAPI_ListLinks_Range(t *testing.T) {
 	require.Len(t, list2, 6)
 	require.Equal(t, int64(6), asInt64(t, list2[0]["id"]))
 	require.Equal(t, int64(11), asInt64(t, list2[5]["id"]))
+}
+
+func TestAPI_ListLinks_Range_Header(t *testing.T) {
+	resetLinks(t)
+
+	seedLinks(t, 11)
+
+	rec := doRequestWithHeaders(t, http.MethodGet, apiLinksPath, nil, map[string]string{
+		"Range": "links=0-4",
+	})
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "links 0-4/11", rec.Header().Get("Content-Range"))
+
+	var list []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &list))
+	require.Len(t, list, 5)
+	require.Equal(t, int64(1), asInt64(t, list[0]["id"]))
+	require.Equal(t, int64(5), asInt64(t, list[4]["id"]))
+}
+
+func TestAPI_ListLinks_Sort_RangeHeader(t *testing.T) {
+	resetLinks(t)
+
+	seedLinks(t, 5)
+
+	sortParam := sortJSON(t, string(links.SortFieldID), links.SortDesc)
+	rec := doRequestWithHeaders(t, http.MethodGet, "/api/links?sort="+sortParam, nil, map[string]string{
+		"Range": "links=0-1",
+	})
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "links 0-1/5", rec.Header().Get("Content-Range"))
+
+	var list []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &list))
+	require.Len(t, list, 2)
+	require.Equal(t, int64(5), asInt64(t, list[0]["id"]))
+	require.Equal(t, int64(4), asInt64(t, list[1]["id"]))
+}
+
+func TestAPI_ListLinks_Range_WithFilter(t *testing.T) {
+	resetLinks(t)
+
+	seedLinks(t, 11)
+
+	rangeParam := url.QueryEscape(`[0,4]`)
+	filterParam := url.QueryEscape(`{}`)
+
+	rec := doRequest(t, http.MethodGet, "/api/links?range="+rangeParam, nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "links 0-4/11", rec.Header().Get("Content-Range"))
+
+	var base []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &base))
+
+	rec2 := doRequest(t, http.MethodGet, "/api/links?range="+rangeParam+"&filter="+filterParam, nil)
+	require.Equal(t, http.StatusOK, rec2.Code)
+	require.Equal(t, "links 0-4/11", rec2.Header().Get("Content-Range"))
+
+	var withFilter []map[string]any
+	require.NoError(t, json.Unmarshal(rec2.Body.Bytes(), &withFilter))
+
+	require.Equal(t, base, withFilter)
+}
+
+func TestAPI_ListLinks_SortByIDDesc(t *testing.T) {
+	resetLinks(t)
+
+	seedLinks(t, 5)
+
+	rangeParam := url.QueryEscape(`[0,4]`)
+	sortParam := sortJSON(t, string(links.SortFieldID), links.SortDesc)
+	rec := doRequest(t, http.MethodGet, "/api/links?range="+rangeParam+"&sort="+sortParam, nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "links 0-4/5", rec.Header().Get("Content-Range"))
+
+	var list []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &list))
+	require.Len(t, list, 5)
+	require.Equal(t, int64(5), asInt64(t, list[0]["id"]))
+	require.Equal(t, int64(1), asInt64(t, list[4]["id"]))
+}
+
+func TestAPI_ListLinks_SortByShortURL(t *testing.T) {
+	resetLinks(t)
+
+	createLink(t, "https://example.com/one", "ccc")
+	createLink(t, "https://example.com/two", "aaa")
+	createLink(t, "https://example.com/three", "bbb")
+
+	rangeParam := url.QueryEscape(`[0,2]`)
+	sortParam := sortJSON(t, "short_url", links.SortAsc)
+	rec := doRequest(t, http.MethodGet, "/api/links?range="+rangeParam+"&sort="+sortParam, nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var list []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &list))
+	require.Len(t, list, 3)
+	require.Equal(t, "aaa", asString(t, list[0]["short_name"]))
+	require.Equal(t, "ccc", asString(t, list[2]["short_name"]))
 }
 
 func TestAPI_ListLinks_Default(t *testing.T) {
@@ -201,12 +304,29 @@ func TestAPI_ListLinks_Default(t *testing.T) {
 	require.Equal(t, int64(11), asInt64(t, list[10]["id"]))
 }
 
+func TestAPI_ListLinks_DefaultSort(t *testing.T) {
+	resetLinks(t)
+
+	seedLinks(t, 3)
+
+	rangeParam := url.QueryEscape(`[0,1]`)
+	rec := doRequest(t, http.MethodGet, "/api/links?range="+rangeParam, nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "links 0-1/3", rec.Header().Get("Content-Range"))
+
+	var list []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &list))
+	require.Len(t, list, 2)
+	require.Equal(t, int64(1), asInt64(t, list[0]["id"]))
+	require.Equal(t, int64(2), asInt64(t, list[1]["id"]))
+}
+
 func TestAPI_ListLinks_EmptyRange(t *testing.T) {
 	resetLinks(t)
 
 	seedLinks(t, 11)
 
-	rec := doRequest(t, http.MethodGet, "/api/links?range=[20,10]", nil)
+	rec := doRequest(t, http.MethodGet, "/api/links?range=[20,30]", nil)
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Equal(t, "links */11", rec.Header().Get("Content-Range"))
 
@@ -359,9 +479,8 @@ func TestAPI_ListLinkVisits_Range(t *testing.T) {
 		require.Equal(t, http.StatusFound, rec.Code)
 	}
 
-	rec := doRequestWithHeaders(t, http.MethodGet, apiLinkVisitsPath, nil, map[string]string{
-		"Range": "[0,2]",
-	})
+	rangeParam := url.QueryEscape(`[0,1]`)
+	rec := doRequest(t, http.MethodGet, apiLinkVisitsPath+"?range="+rangeParam, nil)
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Equal(t, "link_visits 0-1/3", rec.Header().Get("Content-Range"))
 
@@ -383,6 +502,169 @@ func TestAPI_ListLinkVisits_Range(t *testing.T) {
 	require.Equal(t, "curl/8.5.0", visits[0].UserAgent)
 	require.Equal(t, http.StatusFound, visits[0].Status)
 	require.False(t, visits[0].CreatedAt.IsZero())
+}
+
+func TestAPI_ListLinkVisits_DefaultSort(t *testing.T) {
+	resetLinks(t)
+
+	createLink(t, "https://example.com/long-url", "visitlist")
+
+	for range 2 {
+		req := httptest.NewRequest(http.MethodGet, "/r/visitlist", nil)
+		req.Header.Set("User-Agent", "curl/8.5.0")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusFound, rec.Code)
+	}
+
+	rangeParam := url.QueryEscape(`[0,1]`)
+	rec := doRequest(t, http.MethodGet, apiLinkVisitsPath+"?range="+rangeParam, nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var visits []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &visits))
+	require.Len(t, visits, 2)
+	// created_at can be equal, so the tie-breaker is id DESC.
+	require.Greater(t, asInt64(t, visits[0]["id"]), asInt64(t, visits[1]["id"]))
+}
+
+func TestAPI_ListLinkVisits_Range_Header(t *testing.T) {
+	resetLinks(t)
+
+	createLink(t, "https://example.com/long-url", "visitlist")
+
+	for range 3 {
+		req := httptest.NewRequest(http.MethodGet, "/r/visitlist", nil)
+		req.Header.Set("User-Agent", "curl/8.5.0")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusFound, rec.Code)
+	}
+
+	rec := doRequestWithHeaders(t, http.MethodGet, apiLinkVisitsPath, nil, map[string]string{
+		"Range": "link_visits=0-1",
+	})
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "link_visits 0-1/3", rec.Header().Get("Content-Range"))
+
+	var visits []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &visits))
+	require.Len(t, visits, 2)
+}
+
+func TestAPI_ListLinkVisits_Sort_RangeHeader(t *testing.T) {
+	resetLinks(t)
+
+	createLink(t, "https://example.com/long-url", "visitlist")
+
+	for range 3 {
+		req := httptest.NewRequest(http.MethodGet, "/r/visitlist", nil)
+		req.Header.Set("User-Agent", "curl/8.5.0")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusFound, rec.Code)
+	}
+
+	sortParam := sortJSON(t, string(links.SortFieldID), links.SortAsc)
+	rec := doRequestWithHeaders(t, http.MethodGet, apiLinkVisitsPath+"?sort="+sortParam, nil, map[string]string{
+		"Range": "link_visits=0-1",
+	})
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "link_visits 0-1/3", rec.Header().Get("Content-Range"))
+
+	var visits []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &visits))
+	require.Len(t, visits, 2)
+	require.Less(t, asInt64(t, visits[0]["id"]), asInt64(t, visits[1]["id"]))
+}
+
+func TestAPI_ListLinkVisits_Range_WithFilter(t *testing.T) {
+	resetLinks(t)
+
+	createLink(t, "https://example.com/long-url", "visitlist")
+
+	for range 3 {
+		req := httptest.NewRequest(http.MethodGet, "/r/visitlist", nil)
+		req.Header.Set("User-Agent", "curl/8.5.0")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusFound, rec.Code)
+	}
+
+	rangeParam := url.QueryEscape(`[0,1]`)
+	filterParam := url.QueryEscape(`{}`)
+
+	rec := doRequest(t, http.MethodGet, apiLinkVisitsPath+"?range="+rangeParam, nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "link_visits 0-1/3", rec.Header().Get("Content-Range"))
+
+	var base []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &base))
+
+	rec2 := doRequest(t, http.MethodGet, apiLinkVisitsPath+"?range="+rangeParam+"&filter="+filterParam, nil)
+	require.Equal(t, http.StatusOK, rec2.Code)
+	require.Equal(t, "link_visits 0-1/3", rec2.Header().Get("Content-Range"))
+
+	var withFilter []map[string]any
+	require.NoError(t, json.Unmarshal(rec2.Body.Bytes(), &withFilter))
+
+	require.Equal(t, base, withFilter)
+}
+
+func TestAPI_ListLinkVisits_SortByLinkIDAsc(t *testing.T) {
+	resetLinks(t)
+
+	firstID := createLink(t, "https://example.com/one", "visita")
+	secondID := createLink(t, "https://example.com/two", "visitb")
+
+	for _, code := range []string{"visitb", "visita"} {
+		req := httptest.NewRequest(http.MethodGet, "/r/"+code, nil)
+		req.Header.Set("User-Agent", "curl/8.5.0")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusFound, rec.Code)
+	}
+
+	rangeParam := url.QueryEscape(`[0,1]`)
+	sortParam := sortJSON(t, string(links.SortFieldLinkID), links.SortAsc)
+	rec := doRequest(t, http.MethodGet, apiLinkVisitsPath+"?range="+rangeParam+"&sort="+sortParam, nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	type visitResp struct {
+		LinkID int64 `json:"link_id"`
+	}
+
+	var visits []visitResp
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &visits))
+	require.Len(t, visits, 2)
+	require.Equal(t, firstID, visits[0].LinkID)
+	require.Equal(t, secondID, visits[1].LinkID)
+}
+
+func TestAPI_ListLinkVisits_SortByRefferAlias(t *testing.T) {
+	resetLinks(t)
+
+	_ = createLink(t, "https://example.com/one", "reffer1")
+
+	for _, ref := range []string{"https://b.example.com", "https://a.example.com"} {
+		req := httptest.NewRequest(http.MethodGet, "/r/reffer1", nil)
+		req.Header.Set("User-Agent", "curl/8.5.0")
+		req.Header.Set("Referer", ref)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusFound, rec.Code)
+	}
+
+	rangeParam := url.QueryEscape(`[0,1]`)
+	sortParam := sortJSON(t, "reffer", links.SortAsc)
+	rec := doRequest(t, http.MethodGet, apiLinkVisitsPath+"?range="+rangeParam+"&sort="+sortParam, nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var visits []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &visits))
+	require.Len(t, visits, 2)
+	require.Equal(t, "https://a.example.com", asString(t, visits[0]["reffer"]))
+	require.Equal(t, "https://b.example.com", asString(t, visits[1]["reffer"]))
 }
 
 func TestAPI_Conflict_Create(t *testing.T) {
