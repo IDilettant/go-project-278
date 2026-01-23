@@ -10,23 +10,39 @@ import (
 
 	"code/internal/adapters/httpapi/dto"
 	"code/internal/adapters/httpapi/problems"
+	"code/internal/app/links"
 	"code/internal/domain"
 )
 
 type CreateLinkRequest struct {
-	OriginalURL string `json:"original_url" validate:"required,url" example:"https://example.com"`
-	ShortName   string `json:"short_name" validate:"omitempty,min=3,max=32" example:"abc123"`
+	OriginalURL string `json:"original_url" binding:"required,url" example:"https://example.com"`
+	ShortName   string `json:"short_name" binding:"omitempty,min=3,max=32" example:"abc123"`
 }
 
 type UpdateLinkRequest struct {
-	OriginalURL string `json:"original_url" validate:"required,url" example:"https://example.com/updated"`
-	ShortName   string `json:"short_name" validate:"omitempty,min=3,max=32" example:"abc123"`
+	OriginalURL string `json:"original_url" binding:"required,url" example:"https://example.com/updated"`
+	ShortName   string `json:"short_name" binding:"omitempty,min=3,max=32" example:"abc123"`
+	ShortURL    string `json:"short_url" example:"https://example.com/r/abc123"`
 }
 
 func (h *Handler) ListLinks(c *gin.Context) {
-	rng, query, hasRange, err := parseListRange(rangeValue(c))
+	rng, _, hasRange, err := parseRangeFromRequest(c)
 	if err != nil {
 		writeInvalidRange(c)
+
+		return
+	}
+
+	rawSort, ok := parseReactAdminSort(c.Query("sort"))
+	if !ok {
+		h.fail(c, links.ErrInvalidSort)
+
+		return
+	}
+
+	sort, err := links.NormalizeAndValidateSort(rawSort, links.DefaultLinksSort, links.AllowedLinksSortFields())
+	if err != nil {
+		h.fail(c, err)
 
 		return
 	}
@@ -36,14 +52,16 @@ func (h *Handler) ListLinks(c *gin.Context) {
 		total int64
 	)
 
+	query := links.LinksQuery{Sort: sort}
 	if hasRange {
-		items, total, err = h.svc.ListPage(c.Request.Context(), query.Offset, query.Limit, true)
-	} else {
-		items, err = h.svc.ListAll(c.Request.Context())
+		query.Range = &rng
 	}
+
+	items, total, err = h.svc.ListLinks(c.Request.Context(), query)
 
 	if err != nil {
 		h.fail(c, err)
+
 		return
 	}
 
@@ -67,8 +85,7 @@ func (h *Handler) ListLinks(c *gin.Context) {
 func (h *Handler) CreateLink(c *gin.Context) {
 	var req CreateLinkRequest
 
-	err := bindJSONStrict(c, &req)
-	if err != nil {
+	if err := BindJSONStrict(c, &req); err != nil {
 		badJSON(c)
 
 		return
@@ -118,8 +135,7 @@ func (h *Handler) UpdateLink(c *gin.Context) {
 
 	var req UpdateLinkRequest
 
-	err := bindJSONStrict(c, &req)
-	if err != nil {
+	if err := BindJSONStrict(c, &req); err != nil {
 		badJSON(c)
 
 		return

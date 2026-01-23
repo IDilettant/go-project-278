@@ -23,7 +23,13 @@ func New(svc links.UseCase, baseURL string) *Handler {
 func (h *Handler) fail(c *gin.Context, err error) {
 	if errs, ok := validationErrorsFromDomain(err); ok {
 		writeValidationErrors(c, errs)
-		
+
+		return
+	}
+
+	if errors.Is(err, links.ErrInvalidSort) {
+		writeInvalidSort(c)
+
 		return
 	}
 

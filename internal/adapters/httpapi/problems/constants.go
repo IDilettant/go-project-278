@@ -25,6 +25,7 @@ const (
 	DetailInvalidShortName  = "invalid short_name"
 	DetailInvalidJSON       = "invalid json"
 	DetailInvalidRange      = "invalid range"
+	DetailInvalidSort       = "invalid sort"
 	DetailInvalidID         = "invalid id"
 	DetailShortNameConflict = "short_name already exists"
 	DetailNotFound          = "not found"

@@ -9,7 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func bindJSONStrict(c *gin.Context, dst any) error {
+// BindJSONStrict decodes JSON and rejects unknown fields and extra objects.
+func BindJSONStrict(c *gin.Context, dst any) error {
 	if c.Request.Body == nil {
 		return io.EOF
 	}
