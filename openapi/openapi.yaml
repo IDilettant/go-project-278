@@ -44,6 +44,23 @@ paths:
           schema:
             type: string
             example: "[0,10]"
+        - name: Range
+          in: header
+          description: Range of items, format links=start-count.
+          required: false
+          schema:
+            type: string
+            example: "links=0-9"
+        - name: sort
+          in: query
+          description: |
+            Sort order as JSON [field,ASC|DESC].
+            Allowed fields: id, short_name, original_url.
+            Alias: short_url -> short_name.
+          required: false
+          schema:
+            type: string
+            example: '["id","DESC"]'
       responses:
         "200":
           description: OK
@@ -120,11 +137,21 @@ paths:
             example: "[0,10]"
         - name: Range
           in: header
-          description: Range of items, format [start,count].
+          description: Range of items, format link_visits=start-count.
           required: false
           schema:
             type: string
-            example: "[0,10]"
+            example: "link_visits=0-9"
+        - name: sort
+          in: query
+          description: |
+            Sort order as JSON [field,ASC|DESC].
+            Allowed fields: id, link_id, ip, status, referer, created_at.
+            Alias: reffer -> referer.
+          required: false
+          schema:
+            type: string
+            example: '["created_at","DESC"]'
       responses:
         "200":
           description: OK
@@ -361,16 +388,26 @@ components:
 
   responses:
     BadRequest:
-      description: Bad Request
+      description: Bad Request (validation error)
       content:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
-          example:
-            type: validation_error
-            title: Validation error
-            status: 400
-            detail: invalid short_name
+          examples:
+            invalid_range:
+              summary: Invalid range
+              value:
+                type: validation_error
+                title: Validation error
+                status: 400
+                detail: invalid range
+            invalid_sort:
+              summary: Invalid sort
+              value:
+                type: validation_error
+                title: Validation error
+                status: 400
+                detail: invalid sort
 
     NotFound:
       description: Not Found
