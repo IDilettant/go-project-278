@@ -40,27 +40,19 @@ func New(repo Repo, visitsRepo VisitsRepo, log Logger) *Service {
 
 var _ UseCase = (*Service)(nil)
 
-func (s *Service) ListAll(ctx context.Context) ([]domain.Link, error) {
-	items, err := s.repo.ListAll(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("links list all: %w", err)
+func (s *Service) ListLinks(ctx context.Context, query LinksQuery) ([]domain.Link, int64, error) {
+	if query.Range == nil {
+		items, err := s.repo.ListAll(ctx, query.Sort)
+		if err != nil {
+			return nil, 0, fmt.Errorf("links list all: %w", err)
+		}
+
+		return items, -1, nil
 	}
 
-	return items, nil
-}
-
-func (s *Service) ListPage(
-	ctx context.Context,
-	offset, limit int32,
-	needTotal bool,
-) ([]domain.Link, int64, error) {
-	items, err := s.repo.ListPage(ctx, offset, limit)
+	items, err := s.repo.ListPage(ctx, int32(query.Range.Start), int32(query.Range.Count), query.Sort)
 	if err != nil {
 		return nil, 0, fmt.Errorf("links list page: %w", err)
-	}
-
-	if !needTotal {
-		return items, -1, nil
 	}
 
 	total, err := s.repo.Count(ctx)
@@ -204,25 +196,21 @@ func (s *Service) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (s *Service) ListVisitsAll(ctx context.Context) ([]domain.LinkVisit, error) {
-	if s.visitsRepo == nil {
-		return nil, errVisitsRepoNil
-	}
-
-	items, err := s.visitsRepo.ListAll(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("link visits list all: %w", err)
-	}
-
-	return items, nil
-}
-
-func (s *Service) ListVisits(ctx context.Context, rng Range) ([]domain.LinkVisit, int64, error) {
+func (s *Service) ListLinkVisits(ctx context.Context, query LinkVisitsQuery) ([]domain.LinkVisit, int64, error) {
 	if s.visitsRepo == nil {
 		return nil, 0, errVisitsRepoNil
 	}
 
-	items, err := s.visitsRepo.ListPage(ctx, int32(rng.Start), int32(rng.Count))
+	if query.Range == nil {
+		items, err := s.visitsRepo.ListAll(ctx, query.Sort)
+		if err != nil {
+			return nil, 0, fmt.Errorf("link visits list all: %w", err)
+		}
+
+		return items, -1, nil
+	}
+
+	items, err := s.visitsRepo.ListPage(ctx, int32(query.Range.Start), int32(query.Range.Count), query.Sort)
 	if err != nil {
 		return nil, 0, fmt.Errorf("link visits list page: %w", err)
 	}

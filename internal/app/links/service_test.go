@@ -13,8 +13,8 @@ import (
 type stubRepo struct {
 	t testing.TB
 
-	listAllFunc        func(context.Context) ([]domain.Link, error)
-	listPageFunc       func(context.Context, int32, int32) ([]domain.Link, error)
+	listAllFunc        func(context.Context, Sort) ([]domain.Link, error)
+	listPageFunc       func(context.Context, int32, int32, Sort) ([]domain.Link, error)
 	countFunc          func(context.Context) (int64, error)
 	getByIDFunc        func(context.Context, int64) (domain.Link, error)
 	getByShortNameFunc func(context.Context, string) (domain.Link, error)
@@ -27,8 +27,8 @@ type stubVisitsRepo struct {
 	t testing.TB
 
 	createFunc   func(context.Context, domain.LinkVisit) (int64, error)
-	listAllFunc  func(context.Context) ([]domain.LinkVisit, error)
-	listPageFunc func(context.Context, int32, int32) ([]domain.LinkVisit, error)
+	listAllFunc  func(context.Context, Sort) ([]domain.LinkVisit, error)
+	listPageFunc func(context.Context, int32, int32, Sort) ([]domain.LinkVisit, error)
 	countFunc    func(context.Context) (int64, error)
 }
 
@@ -42,24 +42,24 @@ func (s *stubVisitsRepo) Create(ctx context.Context, visit domain.LinkVisit) (in
 	return s.createFunc(ctx, visit)
 }
 
-func (s *stubVisitsRepo) ListAll(ctx context.Context) ([]domain.LinkVisit, error) {
+func (s *stubVisitsRepo) ListAll(ctx context.Context, sort Sort) ([]domain.LinkVisit, error) {
 	s.t.Helper()
 
 	if s.listAllFunc == nil {
 		s.t.Fatalf("unexpected ListAll call")
 	}
 
-	return s.listAllFunc(ctx)
+	return s.listAllFunc(ctx, sort)
 }
 
-func (s *stubVisitsRepo) ListPage(ctx context.Context, offset, limit int32) ([]domain.LinkVisit, error) {
+func (s *stubVisitsRepo) ListPage(ctx context.Context, offset, limit int32, sort Sort) ([]domain.LinkVisit, error) {
 	s.t.Helper()
 
 	if s.listPageFunc == nil {
 		s.t.Fatalf("unexpected ListPage call")
 	}
 
-	return s.listPageFunc(ctx, offset, limit)
+	return s.listPageFunc(ctx, offset, limit, sort)
 }
 
 func (s *stubVisitsRepo) Count(ctx context.Context) (int64, error) {
@@ -72,24 +72,24 @@ func (s *stubVisitsRepo) Count(ctx context.Context) (int64, error) {
 	return s.countFunc(ctx)
 }
 
-func (s *stubRepo) ListAll(ctx context.Context) ([]domain.Link, error) {
+func (s *stubRepo) ListAll(ctx context.Context, sort Sort) ([]domain.Link, error) {
 	s.t.Helper()
 
 	if s.listAllFunc == nil {
 		s.t.Fatalf("unexpected ListAll call")
 	}
 
-	return s.listAllFunc(ctx)
+	return s.listAllFunc(ctx, sort)
 }
 
-func (s *stubRepo) ListPage(ctx context.Context, offset, limit int32) ([]domain.Link, error) {
+func (s *stubRepo) ListPage(ctx context.Context, offset, limit int32, sort Sort) ([]domain.Link, error) {
 	s.t.Helper()
 
 	if s.listPageFunc == nil {
 		s.t.Fatalf("unexpected ListPage call")
 	}
 
-	return s.listPageFunc(ctx, offset, limit)
+	return s.listPageFunc(ctx, offset, limit, sort)
 }
 
 func (s *stubRepo) Count(ctx context.Context) (int64, error) {
