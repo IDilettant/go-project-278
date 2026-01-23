@@ -25,23 +25,23 @@ func parseListRange(raw string) (Range, PageQuery, bool, error) {
 		return Range{}, PageQuery{}, false, err
 	}
 
-	if rng.Start > math.MaxInt32 || rng.Count > math.MaxInt32 {
-		return Range{}, PageQuery{}, false, errInvalidRange
+	query, err := pageQueryFromRange(rng)
+	if err != nil {
+		return Range{}, PageQuery{}, false, err
 	}
 
-	return rng, PageQuery{
-		Offset: int32(rng.Start),
-		Limit:  int32(rng.Count),
-	}, true, nil
+	return rng, query, true, nil
 }
 
-func rangeValue(c *gin.Context) string {
-	raw := strings.TrimSpace(c.GetHeader("Range"))
-	if raw != "" {
-		return raw
+func pageQueryFromRange(rng Range) (PageQuery, error) {
+	if rng.Start > math.MaxInt32 || rng.Count > math.MaxInt32 {
+		return PageQuery{}, errInvalidRange
 	}
 
-	return c.Query("range")
+	return PageQuery{
+		Offset: int32(rng.Start),
+		Limit:  int32(rng.Count),
+	}, nil
 }
 
 func writeInvalidRange(c *gin.Context) {
@@ -49,6 +49,15 @@ func writeInvalidRange(c *gin.Context) {
 		Type:   problems.ProblemTypeValidation,
 		Title:  problems.TitleValidation,
 		Status: http.StatusBadRequest,
-		Detail: problems.DetailInvalidRange, // expected [start,count]
+		Detail: problems.DetailInvalidRange, // expected [start,count], [start,end], or start-end
+	})
+}
+
+func writeInvalidSort(c *gin.Context) {
+	problems.WriteProblem(c, problems.Problem{
+		Type:   problems.ProblemTypeValidation,
+		Title:  problems.TitleValidation,
+		Status: http.StatusBadRequest,
+		Detail: problems.DetailInvalidSort,
 	})
 }
