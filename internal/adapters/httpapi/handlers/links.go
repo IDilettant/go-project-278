@@ -15,12 +15,13 @@ import (
 )
 
 type CreateLinkRequest struct {
-	OriginalURL string `json:"original_url" binding:"required,url" example:"https://example.com"`
+	OriginalURL string `json:"original_url" binding:"required" example:"https://example.com"`
 	ShortName   string `json:"short_name" binding:"omitempty,min=3,max=32" example:"abc123"`
 }
 
 type UpdateLinkRequest struct {
-	OriginalURL string `json:"original_url" binding:"required,url" example:"https://example.com/updated"`
+	ID          int64  `json:"id"`
+	OriginalURL string `json:"original_url" binding:"required" example:"https://example.com/updated"`
 	ShortName   string `json:"short_name" binding:"omitempty,min=3,max=32" example:"abc123"`
 	ShortURL    string `json:"short_url" example:"https://example.com/r/abc123"`
 }
