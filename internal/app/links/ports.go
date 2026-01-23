@@ -7,8 +7,8 @@ import (
 )
 
 type Repo interface {
-	ListAll(ctx context.Context) ([]domain.Link, error)
-	ListPage(ctx context.Context, offset, limit int32) ([]domain.Link, error)
+	ListAll(ctx context.Context, sort Sort) ([]domain.Link, error)
+	ListPage(ctx context.Context, offset, limit int32, sort Sort) ([]domain.Link, error)
 	Count(ctx context.Context) (int64, error)
 	GetByID(ctx context.Context, id int64) (domain.Link, error)
 	GetByShortName(ctx context.Context, shortName string) (domain.Link, error)
@@ -19,7 +19,7 @@ type Repo interface {
 
 type VisitsRepo interface {
 	Create(ctx context.Context, visit domain.LinkVisit) (int64, error)
-	ListAll(ctx context.Context) ([]domain.LinkVisit, error)
-	ListPage(ctx context.Context, offset, limit int32) ([]domain.LinkVisit, error)
+	ListAll(ctx context.Context, sort Sort) ([]domain.LinkVisit, error)
+	ListPage(ctx context.Context, offset, limit int32, sort Sort) ([]domain.LinkVisit, error)
 	Count(ctx context.Context) (int64, error)
 }
