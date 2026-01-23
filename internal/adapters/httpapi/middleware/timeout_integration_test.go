@@ -20,12 +20,12 @@ import (
 
 type timeoutRepo struct{}
 
-func (timeoutRepo) ListAll(ctx context.Context) ([]domain.Link, error) {
+func (timeoutRepo) ListAll(ctx context.Context, _ links.Sort) ([]domain.Link, error) {
 	<-ctx.Done()
 	return nil, ctx.Err()
 }
 
-func (timeoutRepo) ListPage(ctx context.Context, _, _ int32) ([]domain.Link, error) {
+func (timeoutRepo) ListPage(ctx context.Context, _, _ int32, _ links.Sort) ([]domain.Link, error) {
 	<-ctx.Done()
 	return nil, ctx.Err()
 }

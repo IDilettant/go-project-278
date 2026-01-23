@@ -29,7 +29,7 @@ type slowRepo struct {
 	errCh chan error
 }
 
-func (r slowRepo) ListAll(ctx context.Context) ([]domain.Link, error) {
+func (r slowRepo) ListAll(ctx context.Context, _ links.Sort) ([]domain.Link, error) {
 	_, err := r.db.ExecContext(ctx, "SELECT pg_sleep($1)", 0.2)
 	select {
 	case r.errCh <- err:
@@ -41,7 +41,7 @@ func (r slowRepo) ListAll(ctx context.Context) ([]domain.Link, error) {
 	return nil, nil
 }
 
-func (slowRepo) ListPage(ctx context.Context, _, _ int32) ([]domain.Link, error) {
+func (slowRepo) ListPage(ctx context.Context, _, _ int32, _ links.Sort) ([]domain.Link, error) {
 	<-ctx.Done()
 	return nil, ctx.Err()
 }

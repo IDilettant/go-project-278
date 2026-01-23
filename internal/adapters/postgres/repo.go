@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"code/internal/adapters/postgres/sqlcgen"
@@ -20,41 +21,72 @@ const (
 )
 
 type Repo struct {
-	q *sqlcgen.Queries
+	db *sql.DB
+	q  *sqlcgen.Queries
 }
 
 func NewRepo(db *sql.DB) *Repo {
-	return &Repo{q: sqlcgen.New(db)}
+	return &Repo{db: db, q: sqlcgen.New(db)}
 }
 
 var _ links.Repo = (*Repo)(nil)
 
-func (r *Repo) ListAll(ctx context.Context) ([]domain.Link, error) {
-	rows, err := r.q.ListLinks(ctx)
+func (r *Repo) ListAll(ctx context.Context, sort links.Sort) ([]domain.Link, error) {
+	orderBy, err := orderByLinks(sort)
 	if err != nil {
-		return nil, fmt.Errorf("postgres: list all links: %w", err)
+		return nil, err
 	}
 
-	out := make([]domain.Link, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, mapRow(row))
-	}
-
-	return out, nil
+	return r.listLinks(ctx, orderBy, nil, nil, "list all links")
 }
 
-func (r *Repo) ListPage(ctx context.Context, offset, limit int32) ([]domain.Link, error) {
-	rows, err := r.q.ListLinksPage(ctx, sqlcgen.ListLinksPageParams{
-		Limit:  limit,
-		Offset: offset,
-	})
+func (r *Repo) ListPage(ctx context.Context, offset, limit int32, sort links.Sort) ([]domain.Link, error) {
+	orderBy, err := orderByLinks(sort)
 	if err != nil {
-		return nil, fmt.Errorf("postgres: list links page: %w", err)
+		return nil, err
 	}
 
-	out := make([]domain.Link, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, mapRow(row))
+	return r.listLinks(ctx, orderBy, &limit, &offset, "list links page")
+}
+
+func (r *Repo) listLinks(ctx context.Context, orderBy string, limit, offset *int32, op string) ([]domain.Link, error) {
+	builder := sq.Select(sqlLinksSelectCols...).
+		From(sqlTableLinks + " " + sqlAliasLinks).
+		OrderBy(orderBy).
+		PlaceholderFormat(sq.Dollar)
+
+	if limit != nil {
+		builder = builder.Limit(uint64(*limit))
+	}
+	
+	if offset != nil {
+		builder = builder.Offset(uint64(*offset))
+	}
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("postgres: build %s: %w", op, err)
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("postgres: %s: %w", op, err)
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	var out []domain.Link
+	for rows.Next() {
+		var item domain.Link
+		if err := rows.Scan(&item.ID, &item.OriginalURL, &item.ShortName, &item.CreatedAt); err != nil {
+			return nil, fmt.Errorf("postgres: %s: %w", op, err)
+		}
+		
+		out = append(out, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("postgres: %s: %w", op, err)
 	}
 
 	return out, nil
