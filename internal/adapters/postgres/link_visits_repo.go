@@ -71,7 +71,7 @@ func (r *LinkVisitsRepo) listLinkVisits(
 	if limit != nil {
 		builder = builder.Limit(uint64(*limit))
 	}
-	
+
 	if offset != nil {
 		builder = builder.Offset(uint64(*offset))
 	}
@@ -83,7 +83,7 @@ func (r *LinkVisitsRepo) listLinkVisits(
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("postgres: %s: %w", op, err)
+		return nil, fmt.Errorf(errOpFmt, op, err)
 	}
 	defer func() {
 		_ = rows.Close()
@@ -102,14 +102,14 @@ func (r *LinkVisitsRepo) listLinkVisits(
 			&item.Referer,
 			&status,
 		); err != nil {
-			return nil, fmt.Errorf("postgres: %s: %w", op, err)
+			return nil, fmt.Errorf(errOpFmt, op, err)
 		}
-		
+
 		item.Status = int(status)
 		out = append(out, item)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("postgres: %s: %w", op, err)
+		return nil, fmt.Errorf(errOpFmt, op, err)
 	}
 
 	return out, nil
