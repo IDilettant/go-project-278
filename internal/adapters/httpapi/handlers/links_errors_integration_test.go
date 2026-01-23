@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"code/internal/app/links"
 	testhttp "code/internal/testing/httptest"
 )
 
@@ -108,6 +109,33 @@ func TestLinksAPI_Errors(t *testing.T) {
 			detail: "invalid range",
 		},
 		{
+			name:   "invalid_sort",
+			method: http.MethodGet,
+			path:   apiLinksPath + "?sort=bad",
+			status: http.StatusBadRequest,
+			typeID: "validation_error",
+			title:  "Validation error",
+			detail: "invalid sort",
+		},
+		{
+			name:   "invalid_sort_unknown_field",
+			method: http.MethodGet,
+			path:   apiLinksPath + "?sort=" + sortJSONRaw(t, "nope", string(links.SortAsc)),
+			status: http.StatusBadRequest,
+			typeID: "validation_error",
+			title:  "Validation error",
+			detail: "invalid sort",
+		},
+		{
+			name:   "invalid_sort_order",
+			method: http.MethodGet,
+			path:   apiLinksPath + "?sort=" + sortJSONRaw(t, string(links.SortFieldID), "DOWN"),
+			status: http.StatusBadRequest,
+			typeID: "validation_error",
+			title:  "Validation error",
+			detail: "invalid sort",
+		},
+		{
 			name:   "invalid_id",
 			method: http.MethodGet,
 			path:   apiLinksPath + "/abc",
@@ -179,6 +207,64 @@ func TestLinksAPI_Errors(t *testing.T) {
 				req.Header.Set(k, v)
 			}
 
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+
+			if rec.Code != tc.status {
+				t.Fatalf("unexpected status: got=%d want=%d body=%s", rec.Code, tc.status, rec.Body.String())
+			}
+
+			p := requireProblem(t, rec, tc.status, tc.typeID)
+			require.Equal(t, tc.title, p.Title)
+			require.Equal(t, tc.detail, p.Detail)
+		})
+	}
+}
+
+func TestLinkVisitsAPI_Errors(t *testing.T) {
+	resetLinks(t)
+
+	problemTests := []struct {
+		name   string
+		method string
+		path   string
+		status int
+		typeID string
+		title  string
+		detail string
+	}{
+		{
+			name:   "invalid_sort",
+			method: http.MethodGet,
+			path:   apiLinkVisitsPath + "?sort=bad",
+			status: http.StatusBadRequest,
+			typeID: "validation_error",
+			title:  "Validation error",
+			detail: "invalid sort",
+		},
+		{
+			name:   "invalid_sort_unknown_field",
+			method: http.MethodGet,
+			path:   apiLinkVisitsPath + "?sort=" + sortJSONRaw(t, "nope", string(links.SortAsc)),
+			status: http.StatusBadRequest,
+			typeID: "validation_error",
+			title:  "Validation error",
+			detail: "invalid sort",
+		},
+		{
+			name:   "invalid_sort_order",
+			method: http.MethodGet,
+			path:   apiLinkVisitsPath + "?sort=" + sortJSONRaw(t, string(links.SortFieldID), "DOWN"),
+			status: http.StatusBadRequest,
+			typeID: "validation_error",
+			title:  "Validation error",
+			detail: "invalid sort",
+		},
+	}
+
+	for _, tc := range problemTests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, nil)
 			rec := httptest.NewRecorder()
 			router.ServeHTTP(rec, req)
 
