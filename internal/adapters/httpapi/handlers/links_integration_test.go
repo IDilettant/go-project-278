@@ -796,7 +796,7 @@ func TestAPI_Validation(t *testing.T) {
 		"short_name":   "good",
 	})
 	errs = requireValidationErrors(t, rec, http.StatusUnprocessableEntity)
-	require.Contains(t, errs["original_url"], "failed on the 'url' tag")
+	require.Equal(t, "invalid url", errs["original_url"])
 }
 
 func TestAPI_Create_MissingOriginalURL_Required(t *testing.T) {
