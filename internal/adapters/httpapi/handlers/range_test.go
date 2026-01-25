@@ -32,14 +32,14 @@ func TestParseRangeParam(t *testing.T) {
 		{name: "invalid_header_negative_start", raw: "-1-10", wantErr: true},
 		{name: "invalid_header_end_before_start", raw: "10-9", wantErr: true},
 		{name: "invalid_header_non_numeric_end", raw: "0-foo", wantErr: true},
-		{name: "invalid_header_limit_too_large", raw: "0-1000", wantErr: true},
+		{name: "invalid_header_limit_too_large", raw: "0-10000", wantErr: true},
 		{name: "non_numeric_start", raw: "[a,10]", wantErr: true},
 		{name: "non_numeric_end", raw: "[0,b]", wantErr: true},
 		{name: "negative_start", raw: "[-1,5]", wantErr: true},
 		{name: "zero_count", raw: "[0,0]", wantErr: true},
 		{name: "negative_count", raw: "[5,-1]", wantErr: true},
-		{name: "limit_max_ok", raw: "[0,1000]", want: handlers.Range{Start: 0, Count: 1000}},
-		{name: "limit_too_large", raw: "[0,1001]", wantErr: true},
+		{name: "limit_max_ok", raw: "[0,10000]", want: handlers.Range{Start: 0, Count: 10000}},
+		{name: "limit_too_large", raw: "[0,10001]", wantErr: true},
 	}
 
 	for _, tc := range tests {

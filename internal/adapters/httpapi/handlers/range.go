@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	maxRangeLimit = 1000
+	maxRangeLimit = 10000
 )
 
 type Range = links.Range

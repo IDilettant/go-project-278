@@ -102,7 +102,7 @@ func TestLinksAPI_Errors(t *testing.T) {
 		{
 			name:   "invalid_range_limit",
 			method: http.MethodGet,
-			path:   apiLinksPath + "?range=[0,1001]",
+			path:   apiLinksPath + "?range=[0,10000]",
 			status: http.StatusBadRequest,
 			typeID: "validation_error",
 			title:  "Validation error",

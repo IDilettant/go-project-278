@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var shortNameRe = regexp.MustCompile(`^[a-zA-Z0-9]{3,32}$`)
+var shortNameRe = regexp.MustCompile(`^[a-zA-Z0-9-]{3,32}$`)
 
 func ValidateOriginalURL(s string) error {
 	s = strings.TrimSpace(s)

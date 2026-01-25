@@ -2,7 +2,7 @@
     admin off
 }
 
-:{$PORT}
+:80
 
 root * /app/public
 

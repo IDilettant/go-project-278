@@ -388,6 +388,8 @@ components:
           type: integer
         detail:
           type: string
+        error:
+          type: string
       required: [type, title, status]
 
     ValidationErrors:

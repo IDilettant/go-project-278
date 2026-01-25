@@ -86,12 +86,7 @@ func Load() (Config, error) {
 
 	cfg.DatabaseURL = dbURL
 
-	sentryDSN, err := mustEnv("SENTRY_DSN", ErrSentryDSNEmpty)
-	if err != nil {
-		return Config{}, err
-	}
-
-	cfg.SentryDSN = sentryDSN
+	cfg.SentryDSN = env("SENTRY_DSN")
 
 	if err := loadSentry(&cfg); err != nil {
 		return Config{}, err
@@ -348,7 +343,7 @@ func loadCORS(cfg *Config) {
 		if origin == "" {
 			continue
 		}
-		
+
 		cfg.CORSAllowedOrigins = append(cfg.CORSAllowedOrigins, origin)
 	}
 }

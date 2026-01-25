@@ -17,6 +17,7 @@ func TestValidateShortName(t *testing.T) {
 	}{
 		{"ok/min_len", "abc", true},
 		{"ok/mixed_case_digits", "aBcD12", true},
+		{"ok/with_dash", "ab-cd", true},
 		{"ok/max_len_32", strings.Repeat("a", 32), true},
 
 		{"bad/empty", "", false},
@@ -25,7 +26,6 @@ func TestValidateShortName(t *testing.T) {
 		{"bad/too_long_33", strings.Repeat("a", 33), false},
 		{"bad/space_inside", "ab cd", false},
 		{"bad/slash", "ab/cd", false},
-		{"bad/dash_forbidden", "ab-cd", false},
 		{"bad/underscore_forbidden", "ab_cd", false},
 		{"bad/unicode", "тест", false},
 	}

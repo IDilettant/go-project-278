@@ -109,7 +109,7 @@ Application configuration is loaded from environment variables via `internal/pla
 | `HTTP_ADDR` | No | `:8080` | Go backend listen address. `PORT` is reserved for Caddy/platform. | App |
 | `BASE_URL` | Yes | - | Public base URL used to build `short_url`. Must be `http(s)` with no path. | App |
 | `DATABASE_URL` | Yes | - | PostgreSQL DSN for the app. | App |
-| `SENTRY_DSN` | Yes | - | Sentry DSN (required by config). | App |
+| `SENTRY_DSN` | No | - | Sentry DSN (optional). | App |
 | `SENTRY_FLUSH_TIMEOUT` | No | `2s` | Flush timeout on shutdown. | App |
 | `SENTRY_MIDDLEWARE_TIMEOUT` | No | `2s` | Timeout for Sentry Gin middleware. | App |
 | `DB_MAX_OPEN_CONNS` | No | `10` | Max open DB connections. | App |
@@ -164,5 +164,5 @@ Responses include `Content-Range` (e.g. `links 0-9/42`).
 ## Observability
 
 - **Health check:** `GET /ping`.
-- **Sentry:** configured via `SENTRY_DSN` and middleware.
+- **Sentry:** configured via `SENTRY_DSN` (optional) and middleware.
 - **Request ID:** middleware sets `X-Request-ID` in responses.

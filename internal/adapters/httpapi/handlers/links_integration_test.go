@@ -785,7 +785,7 @@ func TestAPI_Validation(t *testing.T) {
 
 	rec = doRequest(t, http.MethodPost, "/api/links", map[string]any{
 		"original_url": "https://example.com",
-		"short_name":   "ab-cd",
+		"short_name":   "ab/cd",
 	})
 	errs = requireValidationErrors(t, rec, http.StatusUnprocessableEntity)
 	require.Equal(t, "invalid short_name", errs["short_name"])

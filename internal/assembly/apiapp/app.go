@@ -29,8 +29,10 @@ type App struct {
 func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*App, error) {
 	handlers.InitValidation()
 
-	if err := sentry.Init(sentry.ClientOptions{Dsn: cfg.SentryDSN}); err != nil {
-		return nil, fmt.Errorf("init sentry: %w", err)
+	if cfg.SentryDSN != "" {
+		if err := sentry.Init(sentry.ClientOptions{Dsn: cfg.SentryDSN}); err != nil {
+			return nil, fmt.Errorf("init sentry: %w", err)
+		}
 	}
 
 	db, err := postgres.Open(ctx, postgres.OpenConfig{
@@ -49,14 +51,18 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*App, err
 	appLogger := linksSlogLogger{l: logger}
 	svc := links.New(repo, visitsRepo, appLogger)
 
-	r := httpapi.NewEngine(
+	plugins := []httpapi.EnginePlugin{
 		stack.Logger(),
 		stack.RequestID(),
-		stack.Sentry(cfg.SentryMiddlewareTimeout),
 		stack.Recovery(),
 		stack.RequestTimeout(cfg.RequestBudget),
 		stack.CORS(cfg.CORSAllowedOrigins),
-	)
+	}
+	if cfg.SentryDSN != "" {
+		plugins = append(plugins, stack.Sentry(cfg.SentryMiddlewareTimeout))
+	}
+
+	r := httpapi.NewEngine(plugins...)
 
 	httpapi.RegisterRoutes(r, httpapi.RouterDeps{
 		Links:   svc,
@@ -67,7 +73,9 @@ func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*App, err
 }
 
 func (a *App) Close() error {
-	sentry.Flush(a.cfg.SentryFlushTimeout)
+	if a.cfg.SentryDSN != "" {
+		sentry.Flush(a.cfg.SentryFlushTimeout)
+	}
 
 	if a.db == nil {
 		return nil
