@@ -9,7 +9,8 @@
   },
   "scripts": {
     "frontend": "start-hexlet-url-shortener-frontend",
-    "backend": "make dev",
-    "dev": "concurrently \"npm:backend\" \"npm:frontend\""
+    "backend": "go run main.go",
+    "dev": "concurrently \"npm:backend\" \"npm:frontend\"",
+    "test": "go test -v ./..."
   }
 }
