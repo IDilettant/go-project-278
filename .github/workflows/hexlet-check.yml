@@ -22,12 +22,3 @@ jobs:
         uses: hexlet/project-action@release
         with:
           hexlet-id: ${{ secrets.HEXLET_ID }}
-
-      - name: Dump Hexlet scaffold files
-        if: ${{ always() }}
-        run: |
-          set -euo pipefail
-          sudo find /var -maxdepth 3 -type d -name source 2>/dev/null | head -n 20
-          ls -la /var/tmp/source || true
-          sed -n '1,220p' /var/tmp/source/docker-compose.yml || true
-          sed -n '1,260p' /var/tmp/source/Dockerfile || true
