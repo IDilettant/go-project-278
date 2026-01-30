@@ -85,6 +85,7 @@ func (r *Repo) listLinks(ctx context.Context, orderBy string, limit, offset *int
 
 		out = append(out, item)
 	}
+	
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf(errOpFmt, op, err)
 	}

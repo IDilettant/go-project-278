@@ -22,6 +22,7 @@ func CORS(allowedOrigins []string) gin.HandlerFunc {
 
 		if c.Request.Method == http.MethodOptions {
 			handlePreflight(c, allow)
+			
 			return
 		}
 
@@ -69,6 +70,7 @@ func (p corsPolicy) applyOrigin(c *gin.Context, origin string) bool {
 
 	if p.allowAll {
 		c.Header("Access-Control-Allow-Origin", "*")
+		
 		return true
 	}
 
@@ -85,6 +87,7 @@ func (p corsPolicy) applyOrigin(c *gin.Context, origin string) bool {
 func handlePreflight(c *gin.Context, allow bool) {
 	if !allow {
 		c.AbortWithStatus(http.StatusForbidden)
+		
 		return
 	}
 
