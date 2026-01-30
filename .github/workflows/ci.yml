@@ -9,15 +9,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Setup Node (pinned)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Validate OpenAPI (swagger-cli)
+        run: npx -y @apidevtools/swagger-cli@4.0.4 validate openapi/openapi.yaml
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
-      - name: Validate OpenAPI spec (ApiDOM)
-        uses: swaggerexpert/apidom-validate@v1
-        with:
-          definition-file: openapi/openapi.yaml
-          fails-on: 1
       - run: make build
       - name: Run tests with race & coverage
         run: make cover
