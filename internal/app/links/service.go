@@ -73,7 +73,8 @@ func (s *Service) Get(ctx context.Context, id int64) (domain.Link, error) {
 }
 
 func (s *Service) GetByShortName(ctx context.Context, shortName string) (domain.Link, error) {
-	if err := domain.ValidateShortName(shortName); err != nil {
+	err := domain.ValidateShortName(shortName)
+	if err != nil {
 		return domain.Link{}, err
 	}
 
@@ -257,7 +258,8 @@ func generateShortName() (string, error) {
 
 	var buf [32]byte
 	for filled < shortNameLen {
-		if _, err := rand.Read(buf[:]); err != nil {
+		_, err := rand.Read(buf[:])
+		if err != nil {
 			return "", fmt.Errorf("rand read: %w", err)
 		}
 
